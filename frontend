@@ -1,0 +1,2231 @@
+import { useState, useEffect, useRef } from "react";
+
+// ── Google Fonts & Global CSS ────────────────────────────────────────────────
+const GOOGLE_FONTS =
+  "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap";
+
+const GLOBAL_CSS = `
+@import url('${GOOGLE_FONTS}');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f4f7f5;color:#1a2e24;-webkit-font-smoothing:antialiased}
+button,input{font-family:'DM Sans',sans-serif;}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#c5dac9;border-radius:4px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes fillWater{from{height:0%}to{height:var(--fill)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@keyframes wave{0%,100%{transform:translateX(0) rotate(-2deg)}50%{transform:translateX(10px) rotate(2deg)}}
+@keyframes sosPulse{0%,100%{box-shadow:0 4px 20px rgba(229,57,53,.5)}50%{box-shadow:0 4px 30px rgba(229,57,53,.9)}}
+
+.fade-up{animation:fadeUp .45s ease both}
+.fade-in{animation:fadeIn .4s ease both}
+.slide-in{animation:slideIn .4s ease both}
+.slide-up{animation:slideUp .5s cubic-bezier(.22,1,.36,1) both}
+.float{animation:floatY 3s ease-in-out infinite}
+
+.card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 16px rgba(0,80,40,.06);transition:all .25s ease}
+.card:hover{box-shadow:0 6px 28px rgba(0,80,40,.11);transform:translateY(-2px)}
+
+.btn-primary{background:linear-gradient(135deg,#2d9e6b,#1a7a50);color:#fff;border:none;border-radius:14px;
+  padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 14px rgba(45,158,107,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(45,158,107,.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{background:#9ca3af;box-shadow:none;cursor:not-allowed;transform:none}
+
+.tag{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.5px}
+.tag-green{background:#e4f5ec;color:#1e7a4e}
+.tag-blue{background:#e3f0fb;color:#1565c0}
+.tag-red{background:#fde8e8;color:#c62828}
+.tag-orange{background:#fff3e0;color:#e65100}
+
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;
+  border-radius:14px;cursor:pointer;transition:all .2s;color:#7a9e8a;font-size:9px;font-weight:500;
+  background:none;border:none}
+.nav-item.active{color:#2d9e6b;background:#e4f5ec}
+
+.metric-pill{background:linear-gradient(135deg,#f0faf4,#e4f5ec);border-radius:16px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+
+.water-container{position:relative;width:100px;height:160px;border-radius:50px;
+  background:#e8f4fd;overflow:hidden;border:2.5px solid #90caf9;margin:0 auto}
+.water-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#64b5f6,#1976d2);
+  border-radius:0 0 47px 47px;transition:height 1s cubic-bezier(.4,0,.2,1)}
+.water-wave{position:absolute;top:-6px;left:-20px;width:140%;height:20px;
+  background:rgba(255,255,255,.4);border-radius:50%;animation:wave 2s infinite ease-in-out}
+
+.mood-btn{border:2px solid #e0ece4;background:#fff;border-radius:50%;width:48px;height:48px;
+  font-size:22px;cursor:pointer;transition:all .2s;display:grid;place-items:center}
+.mood-btn:hover,.mood-btn.selected{border-color:#2d9e6b;background:#e4f5ec;transform:scale(1.12)}
+
+.chat-bubble-ai{background:#f0faf5;border-radius:18px 18px 18px 4px;padding:12px 16px;max-width:75%;font-size:14px}
+.chat-bubble-user{background:linear-gradient(135deg,#2d9e6b,#1a7a50);color:#fff;
+  border-radius:18px 18px 4px 18px;padding:12px 16px;max-width:75%;font-size:14px;margin-left:auto}
+
+.sos-btn{position:fixed;bottom:90px;right:20px;width:58px;height:58px;border-radius:50%;
+  background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;font-size:11px;font-weight:700;
+  border:none;cursor:pointer;box-shadow:0 4px 20px rgba(229,57,53,.5);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  z-index:1000;letter-spacing:.5px;animation:pulse 2.5s infinite}
+.sos-btn:hover{transform:scale(1.1)}
+
+.emerg-btn{display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:18px;
+  border:none;width:100%;cursor:pointer;font-size:16px;font-weight:600;transition:all .2s;text-align:left}
+.emerg-btn:active{transform:scale(.97)}
+
+.store-card{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 12px rgba(0,80,40,.06);
+  transition:all .25s;cursor:pointer}
+.store-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,80,40,.12)}
+
+.remedy-card{background:linear-gradient(135deg,#f0faf5,#e8f5e9);border-radius:18px;
+  padding:16px;border:1.5px solid #c8e6c9;cursor:pointer;transition:all .2s}
+.remedy-card:hover{transform:translateY(-2px);border-color:#2d9e6b}
+
+.tip-card{background:linear-gradient(135deg,#e3f2fd,#e8f5e9);border-radius:18px;
+  padding:18px;min-width:240px;cursor:pointer}
+
+.input-field{width:100%;padding:12px 16px;border:1.5px solid #d4e8da;border-radius:14px;
+  font-size:14px;outline:none;background:#fafffe;transition:border-color .2s;color:#1a2e24}
+.input-field:focus{border-color:#2d9e6b;box-shadow:0 0 0 3px rgba(45,158,107,.12)}
+select.input-field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a9e8a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+textarea.input-field{padding:12px 16px;}
+
+.section-title{font-size:18px;font-weight:700;color:#1a2e24;margin-bottom:16px}
+
+@media(max-width:400px){.card{padding:14px}.emerg-btn{padding:14px 16px;font-size:14px}}
+`;
+
+// ── SVG Icon set ─────────────────────────────────────────────────────────────
+const Icon = ({ name, size = 22, color = "currentColor", strokeWidth = 1.8 }) => {
+  const paths = {
+    home:      <><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></>,
+    heart:     <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>,
+    emergency: <><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></>,
+    user:      <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    search:    <><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></>,
+    bell:      <><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></>,
+    activity:  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>,
+    droplet:   <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/>,
+    pill:      <><rect x="2" y="10" width="20" height="4" rx="2"/><line x1="12" y1="10" x2="12" y2="14"/></>,
+    calendar:  <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+    map:       <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></>,
+    phone:     <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.08 6.08l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>,
+    mail:      <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
+    lock:      <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>,
+    eye:       <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    eyeOff:    <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>,
+    shield:    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+    brain:     <path d="M9.5 2A2.5 2.5 0 017 4.5v0A2.5 2.5 0 014.5 7H4a2 2 0 00-2 2v0a2 2 0 002 2h.5A2.5 2.5 0 017 13.5v1A2.5 2.5 0 009.5 17h5a2.5 2.5 0 002.5-2.5v-1a2.5 2.5 0 012.5-2.5H20a2 2 0 002-2v0a2 2 0 00-2-2h-.5A2.5 2.5 0 0117 4.5v0A2.5 2.5 0 0114.5 2h-5z"/>,
+    upload:    <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+    wind:      <><path d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2m15.73-8.27A2.5 2.5 0 1119.5 12H2"/></>,
+    shop:      <><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></>,
+    message:   <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>,
+    zap:       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+    check:     <polyline points="20 6 9 17 4 12"/>,
+    signOut:   <><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: "block" }}>
+      {paths[name] || <circle cx="12" cy="12" r="10"/>}
+    </svg>
+  );
+};
+
+// ── Circular Ring ─────────────────────────────────────────────────────────────
+const Ring = ({ pct, size = 80, stroke = 7, color = "#2d9e6b", bg = "#e4f5ec", children }) => {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  return (
+    <div style={{ position: "relative", width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)", position: "absolute" }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={bg} strokeWidth={stroke}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 1s ease" }}/>
+      </svg>
+      <div style={{ zIndex: 1, textAlign: "center" }}>{children}</div>
+    </div>
+  );
+};
+
+// ── Bar Chart ─────────────────────────────────────────────────────────────────
+const BarChart = ({ data, color = "#2d9e6b", height = 60 }) => {
+  const max = Math.max(...data.map(d => d.v));
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <div style={{ width: "100%", background: color, opacity: 0.15 + 0.85 * (d.v / max),
+            height: `${(d.v / max) * 90}%`, borderRadius: "4px 4px 0 0", transition: "height .8s ease" }}/>
+          <span style={{ fontSize: 9, color: "#7a9e8a" }}>{d.l}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ── Line Chart ────────────────────────────────────────────────────────────────
+const LineChart = ({ data, color = "#2d9e6b", height = 60, width = 200 }) => {
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / (max - min + 1)) * (height - 10) - 5;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height }}>
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${height} ${pts} ${width},${height}`} fill="url(#lg)"/>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// AUTH: SPLASH
+// ════════════════════════════════════════════════════════════════════
+function Splash({ next }) {
+  useEffect(() => { const t = setTimeout(next, 2200); return () => clearTimeout(t); }, []);
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(155deg,#1a7a50,#2d9e6b 50%,#1565c0)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24 }}>
+      <div className="float" style={{ width: 90, height: 90, borderRadius: 26, background: "rgba(255,255,255,.18)", border: "2px solid rgba(255,255,255,.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 44 }}>⚕</span>
+      </div>
+      <div className="fade-up" style={{ textAlign: "center" }}>
+        <div style={{ fontFamily: "Fraunces, serif", fontSize: 32, fontWeight: 700, color: "#fff", letterSpacing: "-.5px" }}>SwasthayaLink</div>
+        <div style={{ fontSize: 14, color: "rgba(255,255,255,.8)", marginTop: 6, fontWeight: 400 }}>Your Complete Health Companion</div>
+      </div>
+      <div style={{ width: 50, height: 4, borderRadius: 99, background: "rgba(255,255,255,.25)", marginTop: 10, overflow: "hidden" }}>
+        <div style={{ height: "100%", background: "#fff", borderRadius: 99, width: "100%", transition: "width 2s linear" }}/>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// AUTH: LOGIN
+// ════════════════════════════════════════════════════════════════════
+function Login({ goHome, goRegister }) {
+  const [email, setEmail] = useState("");
+  const [pass,  setPass]  = useState("");
+  const [show,  setShow]  = useState(false);
+  const [err,   setErr]   = useState("");
+  const [busy,  setBusy]  = useState(false);
+
+  function submit() {
+    setErr("");
+    if (!email.trim()) { setErr("Please enter your email."); return; }
+    if (!pass.trim())  { setErr("Please enter your password."); return; }
+    setBusy(true);
+    setTimeout(() => {
+      setBusy(false);
+      goHome({ name: email.split("@")[0] || "User", email: email.trim() });
+    }, 1000);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4f7f5" }}>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(155deg,#1a7a50,#2d9e6b)", padding: "50px 20px 50px", borderRadius: "0 0 36px 36px", textAlign: "center" }}>
+        <div style={{ width: 60, height: 60, borderRadius: 18, background: "rgba(255,255,255,.2)", border: "2px solid rgba(255,255,255,.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12, fontSize: 28 }}>⚕</div>
+        <div style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700, color: "#fff" }}>SwasthayaLink</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,.8)", marginTop: 4 }}>Your Complete Health Companion</div>
+      </div>
+
+      {/* Form */}
+      <div className="slide-up" style={{ padding: "0 20px 40px", marginTop: -24 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Welcome back 👋</div>
+          <div style={{ fontSize: 13, color: "#7a9e8a", marginBottom: 20 }}>Sign in to continue</div>
+
+          {err && (
+            <div style={{ background: "#fde8e8", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#c62828", fontWeight: 600, marginBottom: 14 }}>
+              ⚠️ {err}
+            </div>
+          )}
+
+          {/* Email */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#7a9e8a", letterSpacing: ".06em", marginBottom: 6 }}>EMAIL ADDRESS</div>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: .5 }}>
+                <Icon name="mail" size={16} color="#2d9e6b"/>
+              </div>
+              <input className="input-field" value={email} onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && submit()}
+                placeholder="you@example.com" type="email"
+                style={{ paddingLeft: 40 }}/>
+            </div>
+          </div>
+
+          {/* Password */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#7a9e8a", letterSpacing: ".06em", marginBottom: 6 }}>PASSWORD</div>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: .5 }}>
+                <Icon name="lock" size={16} color="#2d9e6b"/>
+              </div>
+              <input className="input-field" value={pass} onChange={e => setPass(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && submit()}
+                type={show ? "text" : "password"} placeholder="Enter password"
+                style={{ paddingLeft: 40, paddingRight: 44 }}/>
+              <button onClick={() => setShow(s => !s)}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", display: "flex" }}>
+                <Icon name={show ? "eyeOff" : "eye"} size={16} color="#7a9e8a"/>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ textAlign: "right", marginBottom: 20 }}>
+            <button style={{ background: "none", border: "none", cursor: "pointer", color: "#2d9e6b", fontSize: 12, fontWeight: 700 }}>Forgot password?</button>
+          </div>
+
+          <button className="btn-primary" onClick={submit} disabled={busy}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            {busy
+              ? <><div style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .7s linear infinite" }}/> Signing in…</>
+              : "Sign In →"}
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
+            <div style={{ flex: 1, height: 1, background: "#e0ece4" }}/>
+            <span style={{ fontSize: 12, color: "#7a9e8a" }}>or sign in with</span>
+            <div style={{ flex: 1, height: 1, background: "#e0ece4" }}/>
+          </div>
+
+          {/* Google */}
+          <button onClick={() => goHome({ name: "Demo User", email: "demo@google.com" })}
+            style={{ width: "100%", marginBottom: 10, padding: "12px 16px", borderRadius: 13,
+              border: "1.5px solid #e0ece4", background: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              fontWeight: 600, fontSize: 14, color: "#1a2e24",
+              boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "all .2s" }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.10)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.06)"}>
+            {/* Google coloured G */}
+            <svg width="20" height="20" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.1-6.1C34.46 3.14 29.5 1 24 1 14.82 1 7.07 6.48 3.6 14.22l7.1 5.52C12.44 13.38 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.5 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.7c-.55 2.97-2.2 5.48-4.67 7.17l7.18 5.58C43.27 37.56 46.5 31.5 46.5 24.5z"/>
+              <path fill="#FBBC05" d="M10.71 28.26A14.55 14.55 0 019.5 24c0-1.48.26-2.92.71-4.26l-7.1-5.52A23.93 23.93 0 001 24c0 3.88.93 7.55 2.6 10.78l7.11-6.52z"/>
+              <path fill="#34A853" d="M24 47c5.5 0 10.12-1.82 13.5-4.95l-7.18-5.58c-1.8 1.21-4.1 1.93-6.32 1.93-6.26 0-11.56-3.88-13.29-9.24l-7.11 6.52C7.07 41.52 14.82 47 24 47z"/>
+              <path fill="none" d="M1 1h46v46H1z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          {/* Facebook */}
+          <button onClick={() => goHome({ name: "Demo User", email: "demo@facebook.com" })}
+            style={{ width: "100%", marginBottom: 10, padding: "12px 16px", borderRadius: 13,
+              border: "none", background: "#1877F2", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              fontWeight: 600, fontSize: 14, color: "#fff",
+              boxShadow: "0 4px 14px rgba(24,119,242,.35)", transition: "all .2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#1464d8"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(24,119,242,.5)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#1877F2"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(24,119,242,.35)"; }}>
+            {/* Facebook f logo */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
+              <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+            </svg>
+            Continue with Facebook
+          </button>
+
+          {/* Apple */}
+          <button onClick={() => goHome({ name: "Demo User", email: "demo@apple.com" })}
+            style={{ width: "100%", marginBottom: 18, padding: "12px 16px", borderRadius: 13,
+              border: "none", background: "#000", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              fontWeight: 600, fontSize: 14, color: "#fff",
+              boxShadow: "0 4px 14px rgba(0,0,0,.25)", transition: "all .2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#222"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,.4)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#000"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.25)"; }}>
+            {/* Apple logo */}
+            <svg width="18" height="20" viewBox="0 0 814 1000" fill="#fff">
+              <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-42.3-150.3-99.8C27.5 732.5 0 626.4 0 524.3c0-178.5 116.4-272.9 230.9-272.9 63 0 113.1 41.8 151.4 41.8 36.7 0 94.3-44.4 163.7-44.4h.1c5.1 0 101.6 4.4 163.5 70.8zm-180.3-166.7c31-38.4 53.2-91.8 53.2-145.3 0-7.7-.7-15.4-2.1-22.4-50.4 1.9-110.6 33.5-146.8 78.5-28.1 33.7-54.6 87.7-54.6 141.9 0 8.3 1.4 16.6 2.1 19.2 3.2.5 8.3 1.4 13.4 1.4 45.1 0 102-30.4 135-73.3z"/>
+            </svg>
+            Continue with Apple
+          </button>
+
+          <div style={{ textAlign: "center", fontSize: 13, color: "#7a9e8a" }}>
+            Don't have an account?{" "}
+            <button onClick={goRegister} style={{ background: "none", border: "none", cursor: "pointer", color: "#2d9e6b", fontWeight: 700, fontSize: 13 }}>
+              Create Account
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 14, background: "#fff", borderRadius: 12, border: "1px dashed #c5dac9", padding: "10px 16px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "#7a9e8a" }}>🎯 <strong style={{ color: "#1a2e24" }}>Demo:</strong> Any email + password works</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// AUTH: REGISTER
+// ════════════════════════════════════════════════════════════════════
+function Register({ goHome, goLogin }) {
+  const [name,  setName]  = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pass,  setPass]  = useState("");
+  const [err,   setErr]   = useState("");
+  const [busy,  setBusy]  = useState(false);
+
+  function submit() {
+    setErr("");
+    if (!name.trim())  { setErr("Please enter your full name."); return; }
+    if (!email.trim()) { setErr("Please enter your email."); return; }
+    if (!pass.trim())  { setErr("Please enter a password."); return; }
+    setBusy(true);
+    // Directly enter app — NO redirect back to login
+    setTimeout(() => {
+      setBusy(false);
+      goHome({ name: name.trim(), email: email.trim() });
+    }, 1000);
+  }
+
+  const fields = [
+    { label: "FULL NAME",    val: name,  set: setName,  ph: "Arjun Sharma",    icon: "user",  type: "text" },
+    { label: "EMAIL",        val: email, set: setEmail, ph: "you@example.com", icon: "mail",  type: "email" },
+    { label: "PHONE NUMBER", val: phone, set: setPhone, ph: "+91 98765 43210", icon: "phone", type: "tel" },
+    { label: "PASSWORD",     val: pass,  set: setPass,  ph: "Create password", icon: "lock",  type: "password" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4f7f5" }}>
+      <div style={{ background: "linear-gradient(155deg,#1565c0,#2d9e6b)", padding: "50px 20px 50px", borderRadius: "0 0 36px 36px", textAlign: "center" }}>
+        <div style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700, color: "#fff" }}>Create Account ✨</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,.8)", marginTop: 4 }}>Join SwasthayaLink today</div>
+      </div>
+
+      <div className="slide-up" style={{ padding: "0 20px 40px", marginTop: -24 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ fontFamily: "Fraunces, serif", fontSize: 20, fontWeight: 700, marginBottom: 4 }}>New Account</div>
+          <div style={{ fontSize: 13, color: "#7a9e8a", marginBottom: 20 }}>Fill in your details below</div>
+
+          {err && (
+            <div style={{ background: "#fde8e8", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#c62828", fontWeight: 600, marginBottom: 14 }}>
+              ⚠️ {err}
+            </div>
+          )}
+
+          {fields.map(f => (
+            <div key={f.label} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#7a9e8a", letterSpacing: ".06em", marginBottom: 6 }}>{f.label}</div>
+              <div style={{ position: "relative" }}>
+                <div style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", opacity: .5 }}>
+                  <Icon name={f.icon} size={16} color="#2d9e6b"/>
+                </div>
+                <input className="input-field" value={f.val} onChange={e => f.set(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submit()}
+                  type={f.type} placeholder={f.ph}
+                  style={{ paddingLeft: 40 }}/>
+              </div>
+            </div>
+          ))}
+
+          <button className="btn-primary" onClick={submit} disabled={busy}
+            style={{ width: "100%", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "linear-gradient(135deg,#1565c0,#2d9e6b)" }}>
+            {busy
+              ? <><div style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .7s linear infinite" }}/> Creating account…</>
+              : "Create Account →"}
+          </button>
+
+          <div style={{ textAlign: "center", fontSize: 13, color: "#7a9e8a", marginTop: 16 }}>
+            Already have an account?{" "}
+            <button onClick={goLogin} style={{ background: "none", border: "none", cursor: "pointer", color: "#2d9e6b", fontWeight: 700, fontSize: 13 }}>
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HOME TAB
+// ════════════════════════════════════════════════════════════════════
+const HomeTab = ({ user, setSubView }) => {
+  const [tipIdx, setTipIdx] = useState(0);
+  const first = (user?.name || "User").split(" ")[0];
+  const tips = [
+    { icon: "💧", title: "Stay Hydrated",  body: "Drink 8 glasses of water daily for optimal organ function." },
+    { icon: "🚶", title: "Walk Daily",     body: "Even 30 min of walking reduces cardiovascular risk by 30%." },
+    { icon: "😴", title: "Sleep Well",     body: "7–9 hours of sleep boosts immunity and mental clarity." },
+    { icon: "🥗", title: "Eat Colorfully", body: "Fill half your plate with fruits and vegetables every meal." },
+  ];
+  const remedies = [
+    { icon: "🤧", label: "Cold & Flu",  tip: "Ginger + honey + lemon tea" },
+    { icon: "🤕", label: "Headache",    tip: "Peppermint oil on temples" },
+    { icon: "🫁", label: "Digestion",   tip: "Ajwain water after meals" },
+  ];
+  const quickActions = [
+    { icon: "map",      label: "Nearby Hospitals",  color: "#e3f0fb", icolor: "#1565c0", sub: "map" },
+    { icon: "calendar", label: "Doctor Appt",        color: "#f3e8ff", icolor: "#6a1b9a", sub: "appt" },
+    { icon: "pill",     label: "Medicine Reminder",  color: "#fff3e0", icolor: "#e65100", sub: "meds" },
+    { icon: "heart",    label: "CPR Guide",           color: "#fde8e8", icolor: "#c62828", sub: "cpr" },
+  ];
+
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <div className="fade-up" style={{ paddingTop: 20, marginBottom: 20 }}>
+        <p style={{ color: "#7a9e8a", fontSize: 13 }}>Good Morning 🌅</p>
+        <h1 style={{ fontFamily: "Fraunces, serif", fontSize: 26, fontWeight: 700, color: "#1a2e24", lineHeight: 1.2 }}>
+          Welcome back,<br/>{first}!
+        </h1>
+      </div>
+
+      {/* Quick Health Summary */}
+      <div className="card fade-up" style={{ marginBottom: 16, animationDelay: ".05s" }}>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[
+            { label: "Weight", val: "72",   unit: "kg",    icon: "📊", sub: null },
+            { label: "Steps",  val: "4,821",unit: "today", icon: "🚶", sub: "stepcounter" },
+            { label: "Water",  val: "1.2",  unit: "/ 2L",  icon: "💧", sub: null },
+          ].map((m, i) => (
+            <div key={i} className="metric-pill" style={{ flex: 1, cursor: m.sub ? "pointer" : "default", border: m.sub ? "1.5px solid #c8e6c9" : "none" }}
+              onClick={() => m.sub && setSubView(m.sub)}>
+              <span style={{ fontSize: 18 }}>{m.icon}</span>
+              <span style={{ fontFamily: "Fraunces, serif", fontSize: 18, fontWeight: 700, color: "#1a2e24" }}>{m.val}</span>
+              <span style={{ fontSize: 10, color: "#7a9e8a" }}>{m.unit}</span>
+              <span style={{ fontSize: 10, color: m.sub ? "#2d9e6b" : "#7a9e8a", fontWeight: m.sub ? 700 : 400 }}>{m.sub ? "Tap to track →" : m.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <p className="section-title fade-up" style={{ animationDelay: ".1s" }}>Quick Actions</p>
+      <div className="fade-up" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20, animationDelay: ".12s" }}>
+        {quickActions.map((a, i) => (
+          <div key={i} className="card" style={{ background: a.color, cursor: "pointer", padding: 16 }}
+            onClick={() => { if (a.sub === "map") setSubView("map"); if (a.sub === "cpr") setSubView("cpr"); }}>
+            <div style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, display: "grid", placeItems: "center", marginBottom: 10 }}>
+              <Icon name={a.icon} size={18} color={a.icolor}/>
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#1a2e24" }}>{a.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Upcoming */}
+      <p className="section-title fade-up" style={{ animationDelay: ".15s" }}>Upcoming</p>
+      <div className="card fade-up" style={{ marginBottom: 16, animationDelay: ".17s" }}>
+        {[
+          { icon: "🩺", label: "Dr. Priya Sharma – Cardiology", sub: "Today, 4:00 PM",  tag: "Confirmed", tagClass: "tag-green" },
+          { icon: "💊", label: "Metformin 500mg",               sub: "Daily at 8:00 PM", tag: "Reminder",  tagClass: "tag-orange" },
+        ].map((it, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 12,
+            padding: i > 0 ? "12px 0 0" : "0 0 12px",
+            borderBottom: i === 0 ? "1px solid #f0f5f2" : "none" }}>
+            <span style={{ fontSize: 22 }}>{it.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>{it.label}</p>
+              <p style={{ fontSize: 11, color: "#7a9e8a" }}>{it.sub}</p>
+            </div>
+            <span className={`tag ${it.tagClass}`}>{it.tag}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Daily Tips */}
+      <p className="section-title fade-up" style={{ animationDelay: ".2s" }}>Daily Health Tips</p>
+      <div className="fade-up" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10, marginBottom: 20, animationDelay: ".22s" }}>
+        {tips.map((t, i) => (
+          <div key={i} className="tip-card" onClick={() => setTipIdx(i)}
+            style={{ border: tipIdx === i ? "2px solid #2d9e6b" : "2px solid transparent", minWidth: 220, flexShrink: 0 }}>
+            <span style={{ fontSize: 28 }}>{t.icon}</span>
+            <p style={{ fontWeight: 700, marginTop: 8, fontSize: 14 }}>{t.title}</p>
+            <p style={{ fontSize: 12, color: "#4a7060", marginTop: 4, lineHeight: 1.5 }}>{t.body}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Remedies */}
+      <p className="section-title fade-up" style={{ animationDelay: ".25s" }}>Quick Relief Remedies</p>
+      <div className="fade-up" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20, animationDelay: ".27s" }}>
+        {remedies.map((r, i) => (
+          <div key={i} className="remedy-card" onClick={() => setSubView("remedy")}>
+            <span style={{ fontSize: 26 }}>{r.icon}</span>
+            <p style={{ fontWeight: 700, fontSize: 12, marginTop: 6 }}>{r.label}</p>
+            <p style={{ fontSize: 10, color: "#4a7060", marginTop: 3, lineHeight: 1.4 }}>{r.tip}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Recommended Products */}
+      <p className="section-title fade-up" style={{ animationDelay: ".3s" }}>Recommended Products</p>
+      <div className="fade-up" style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 10, animationDelay: ".32s" }}>
+        {[
+          { name: "Vitamin D3", price: "₹299", emoji: "🌞", tag: "Best Seller" },
+          { name: "Omega-3",    price: "₹549", emoji: "🐟", tag: "Immunity" },
+          { name: "Probiotic",  price: "₹399", emoji: "🦠", tag: "Gut Health" },
+        ].map((p, i) => (
+          <div key={i} className="store-card" style={{ minWidth: 140, padding: 16 }} onClick={() => setSubView("store")}>
+            <span style={{ fontSize: 32 }}>{p.emoji}</span>
+            <p style={{ fontWeight: 700, fontSize: 13, marginTop: 8 }}>{p.name}</p>
+            <p style={{ fontSize: 12, color: "#2d9e6b", fontWeight: 600, marginTop: 2 }}>{p.price}</p>
+            <span className="tag tag-green" style={{ marginTop: 6, display: "inline-block" }}>{p.tag}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// HEALTH TAB
+// ════════════════════════════════════════════════════════════════════
+const HealthTab = ({ setSubView }) => {
+  const [water,       setWater]       = useState(1200);
+  const [waterGoal,   setWaterGoal]   = useState(2000);
+  const [editGoal,    setEditGoal]    = useState(false);
+  const [goalInput,   setGoalInput]   = useState("2000");
+  const [customAmt,   setCustomAmt]   = useState("");
+  const [editCustom,  setEditCustom]  = useState(false);
+  const [drinkLog,    setDrinkLog]    = useState([
+    { time: "07:30", amount: 250, label: "Morning glass" },
+    { time: "10:15", amount: 350, label: "Office water" },
+    { time: "13:00", amount: 300, label: "With lunch" },
+    { time: "15:45", amount: 300, label: "Afternoon" },
+  ]);
+  const [mood,      setMood]      = useState(null);
+  const [breatheOn, setBreatheOn] = useState(false);
+  const [meals] = useState([
+    { type: "Breakfast", cal: 380, items: "Oats, banana, milk" },
+    { type: "Lunch",     cal: 620, items: "Dal, rice, sabzi, curd" },
+  ]);
+  const weight   = [68, 69, 70, 71.5, 71, 72, 72];
+  const steps    = [3200, 5800, 6100, 4500, 6000, 5200, 4821];
+  const weekDays = ["M","T","W","T","F","S","S"];
+  const totalCal = meals.reduce((s, m) => s + m.cal, 0);
+  const waterPct = Math.min(100, (water / waterGoal) * 100);
+
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <div style={{ paddingTop: 20, marginBottom: 20 }}>
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700 }}>My Health</h2>
+        <p style={{ color: "#7a9e8a", fontSize: 13 }}>Thursday, 19 March 2026</p>
+      </div>
+
+      {/* BODY WEIGHT */}
+      <div className="card fade-up" style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500 }}>BODY WEIGHT</p>
+            <p style={{ fontFamily: "Fraunces, serif", fontSize: 32, fontWeight: 700, color: "#1a2e24" }}>72 <span style={{ fontSize: 16, fontWeight: 300 }}>kg</span></p>
+            <span className="tag tag-green">BMI 22.4 – Normal</span>
+          </div>
+          <Ring pct={78} size={72} stroke={7}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#2d9e6b" }}>Goal<br/>78%</span>
+          </Ring>
+        </div>
+        <LineChart data={weight} color="#2d9e6b" height={55}/>
+        <p style={{ fontSize: 11, color: "#7a9e8a", marginTop: 6, textAlign: "center" }}>Last 7 days • Target: 70kg</p>
+        <p style={{ fontSize: 12, color: "#2d9e6b", marginTop: 6, fontStyle: "italic" }}>💪 You're 2kg away from your goal. Keep going!</p>
+      </div>
+
+      {/* ACTIVITY */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".05s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 12 }}>ACTIVITY TRACKING</p>
+        <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+          <Ring pct={80} size={80} stroke={8} color="#2d9e6b">
+            <div style={{ textAlign: "center" }}>
+              <p style={{ fontFamily: "Fraunces, serif", fontSize: 15, fontWeight: 700 }}>4,821</p>
+              <p style={{ fontSize: 9, color: "#7a9e8a" }}>steps</p>
+            </div>
+          </Ring>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+            {[
+              { label: "Calories",   val: "312 kcal", pct: 55, color: "#f57c00" },
+              { label: "Active Min", val: "42 min",   pct: 70, color: "#1565c0" },
+            ].map((m, i) => (
+              <div key={i}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 12, color: "#4a7060" }}>{m.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{m.val}</span>
+                </div>
+                <div style={{ background: "#f0f5f2", borderRadius: 6, height: 6 }}>
+                  <div style={{ width: `${m.pct}%`, height: 6, background: m.color, borderRadius: 6, transition: "width 1s ease" }}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <BarChart data={steps.map((v, i) => ({ v, l: weekDays[i] }))} color="#2d9e6b" height={60}/>
+        {steps[6] >= 6000 && (
+          <div style={{ background: "#e4f5ec", borderRadius: 12, padding: "8px 12px", marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 20 }}>🏆</span>
+            <p style={{ fontSize: 12, color: "#1e7a4e", fontWeight: 600 }}>Goal achieved! You hit 6,000 steps!</p>
+          </div>
+        )}
+        <button className="btn-primary" onClick={() => setSubView("stepcounter")}
+          style={{ width: "100%", marginTop: 12, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>🚶</span> Open Step Counter
+        </button>
+      </div>
+
+      {/* NUTRITION */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".1s" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500 }}>NUTRITION</p>
+          <span style={{ fontFamily: "Fraunces, serif", fontSize: 20, fontWeight: 700, color: "#1a2e24" }}>
+            {totalCal} <span style={{ fontSize: 12, fontWeight: 300, color: "#7a9e8a" }}>/ 2000 kcal</span>
+          </span>
+        </div>
+        <div style={{ background: "#f0f5f2", borderRadius: 8, height: 8, marginBottom: 14 }}>
+          <div style={{ width: `${(totalCal / 2000) * 100}%`, height: 8, background: "linear-gradient(90deg,#2d9e6b,#64d6a0)", borderRadius: 8, transition: "width 1s" }}/>
+        </div>
+        {meals.map((m, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < meals.length - 1 ? "1px solid #f0f5f2" : "none" }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>{m.type}</p>
+              <p style={{ fontSize: 11, color: "#7a9e8a" }}>{m.items}</p>
+            </div>
+            <span style={{ fontFamily: "Fraunces, serif", fontSize: 16, fontWeight: 700, color: "#2d9e6b" }}>{m.cal}</span>
+          </div>
+        ))}
+        <button className="btn-primary" style={{ width: "100%", marginTop: 12, fontSize: 13 }}>+ Add Meal</button>
+      </div>
+
+      {/* WATER */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".15s" }}>
+
+        {/* ── Header ── */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <p style={{ fontSize:12, color:"#7a9e8a", fontWeight:500 }}>WATER INTAKE</p>
+          <button onClick={() => { setWater(0); setDrinkLog([]); }}
+            style={{ background:"#fde8e8", border:"none", borderRadius:8, padding:"4px 10px", fontSize:11, color:"#c62828", fontWeight:700, cursor:"pointer" }}>
+            Reset day
+          </button>
+        </div>
+
+        {/* ── Bottle + Main Stats ── */}
+        <div style={{ display:"flex", gap:18, alignItems:"center", marginBottom:16 }}>
+          <div style={{ flexShrink:0, textAlign:"center" }}>
+            <div className="water-container" style={{ width:72, height:126, margin:"0 auto" }}>
+              <div className="water-fill" style={{ height:`${waterPct}%` }}>
+                <div className="water-wave"/>
+              </div>
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontSize:12, fontWeight:800, color: waterPct > 48 ? "#fff" : "#1565c0", zIndex:2, position:"relative" }}>
+                  {Math.round(waterPct)}%
+                </span>
+              </div>
+            </div>
+            <p style={{ fontSize:10, color:"#7a9e8a", marginTop:5, fontWeight:600 }}>
+              {waterPct >= 100 ? "Done!" : waterPct >= 70 ? "Almost!" : waterPct >= 40 ? "Halfway" : "Keep going"}
+            </p>
+          </div>
+
+          <div style={{ flex:1 }}>
+            <p style={{ fontFamily:"Fraunces, serif", fontSize:30, fontWeight:700, color:"#1a2e24", lineHeight:1 }}>
+              {water.toLocaleString()}<span style={{ fontSize:13, fontWeight:300, color:"#7a9e8a" }}>ml</span>
+            </p>
+
+            {/* Goal row with inline edit */}
+            <div style={{ display:"flex", alignItems:"center", gap:6, margin:"8px 0 4px" }}>
+              {editGoal ? (
+                <>
+                  <span style={{ fontSize:11, color:"#7a9e8a" }}>Goal:</span>
+                  <input type="number" value={goalInput} onChange={e => setGoalInput(e.target.value)}
+                    style={{ width:72, padding:"4px 8px", borderRadius:8, border:"1.5px solid #2d9e6b", fontSize:12, fontWeight:600, outline:"none", textAlign:"center", background:"#fafffe", color:"#1a2e24" }}/>
+                  <span style={{ fontSize:11, color:"#7a9e8a" }}>ml</span>
+                  <button onClick={() => { const v=parseInt(goalInput); if(v>0){setWaterGoal(v); setGoalInput(String(v));} setEditGoal(false); }}
+                    style={{ background:"#2d9e6b", color:"#fff", border:"none", borderRadius:7, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>✓ Save</button>
+                  <button onClick={() => setEditGoal(false)}
+                    style={{ background:"#f0f5f2", color:"#7a9e8a", border:"none", borderRadius:7, padding:"4px 8px", fontSize:11, cursor:"pointer" }}>✕</button>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize:12, color:"#7a9e8a" }}>Goal: <strong style={{ color:"#1a2e24" }}>{waterGoal.toLocaleString()}ml</strong></span>
+                  <button onClick={() => { setGoalInput(String(waterGoal)); setEditGoal(true); }}
+                    style={{ background:"#e4f5ec", border:"none", borderRadius:7, padding:"3px 9px", fontSize:10, color:"#2d9e6b", fontWeight:700, cursor:"pointer" }}>✏️ Edit</button>
+                </>
+              )}
+            </div>
+
+            <div style={{ background:"#e8f4fd", borderRadius:8, height:7, marginBottom:6, overflow:"hidden" }}>
+              <div style={{ width:`${waterPct}%`, height:"100%", background: waterPct>=100?"#2d9e6b":"linear-gradient(90deg,#64b5f6,#1565c0)", borderRadius:8, transition:"width .6s ease" }}/>
+            </div>
+            <p style={{ fontSize:11, color: waterPct>=100?"#1e7a4e":"#7a9e8a", fontWeight: waterPct>=100?700:400 }}>
+              {waterPct >= 100 ? "Goal reached! Great job today!" : `${(waterGoal - water).toLocaleString()}ml remaining`}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Quick Add Buttons ── */}
+        <div style={{ display:"flex", gap:7, marginBottom:14 }}>
+          {[150, 250, 350, 500].map(amt => (
+            <button key={amt} onClick={() => {
+              setWater(w => w + amt);
+              const t = new Date(); const ts = t.getHours().toString().padStart(2,"0")+":"+t.getMinutes().toString().padStart(2,"0");
+              setDrinkLog(l => [{ time:ts, label:`${amt}ml drink`, amount:amt }, ...l].slice(0,20));
+            }} style={{ flex:1, padding:"9px 4px", borderRadius:11, border:"1.5px solid #90caf9", background:"#e3f0fb", fontWeight:700, fontSize:12, color:"#1565c0", cursor:"pointer" }}>
+              +{amt}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Custom Amount ── */}
+        <div style={{ borderTop:"1px solid #f0f5f2", paddingTop:12, marginBottom:14 }}>
+          <p style={{ fontSize:11, color:"#7a9e8a", fontWeight:600, marginBottom:8 }}>CUSTOM AMOUNT</p>
+          <div style={{ display:"flex", gap:8 }}>
+            <input type="number" value={customAmt} onChange={e => setCustomAmt(e.target.value)}
+              onKeyDown={e => { if(e.key==="Enter"){ const v=parseInt(customAmt); if(v>0){ setWater(w=>w+v); const t=new Date(); const ts=t.getHours().toString().padStart(2,"0")+":"+t.getMinutes().toString().padStart(2,"0"); setDrinkLog(l=>[{time:ts,label:"Custom entry",amount:v},...l].slice(0,20)); setCustomAmt(""); }}}}
+              placeholder="Enter ml e.g. 330"
+              style={{ flex:1, padding:"10px 14px", borderRadius:12, border:"1.5px solid #d4e8da", background:"#fafffe", fontSize:13, outline:"none", color:"#1a2e24" }}/>
+            <button className="btn-primary" onClick={() => { const v=parseInt(customAmt); if(v>0){ setWater(w=>w+v); const t=new Date(); const ts=t.getHours().toString().padStart(2,"0")+":"+t.getMinutes().toString().padStart(2,"0"); setDrinkLog(l=>[{time:ts,label:"Custom entry",amount:v},...l].slice(0,20)); setCustomAmt(""); }}}
+              style={{ padding:"10px 18px", fontSize:13, whiteSpace:"nowrap" }}>
+              + Add
+            </button>
+          </div>
+        </div>
+
+        {/* ── Drink Types ── */}
+        <div style={{ marginBottom:14 }}>
+          <p style={{ fontSize:11, color:"#7a9e8a", fontWeight:600, marginBottom:8 }}>DRINK TYPE</p>
+          <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4 }}>
+            {[{label:"Water",ml:250,icon:"💧"},{label:"Green Tea",ml:200,icon:"🍵"},{label:"Coffee",ml:180,icon:"☕"},{label:"Juice",ml:200,icon:"🧃"},{label:"Milk",ml:250,icon:"🥛"},{label:"Coconut",ml:300,icon:"🥥"},{label:"Sports",ml:500,icon:"🏃"},{label:"Buttermilk",ml:200,icon:"🫙"}].map(d => (
+              <button key={d.label} onClick={() => { setWater(w=>w+d.ml); const t=new Date(); const ts=t.getHours().toString().padStart(2,"0")+":"+t.getMinutes().toString().padStart(2,"0"); setDrinkLog(l=>[{time:ts,label:`${d.label} ${d.icon}`,amount:d.ml},...l].slice(0,20)); }}
+                style={{ flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"8px 10px", borderRadius:12, border:"1.5px solid #e0ece4", background:"#fff", cursor:"pointer", minWidth:62 }}>
+                <span style={{ fontSize:20 }}>{d.icon}</span>
+                <span style={{ fontSize:9, fontWeight:700, color:"#1a2e24" }}>{d.label}</span>
+                <span style={{ fontSize:9, color:"#7a9e8a" }}>{d.ml}ml</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Goal Presets ── */}
+        <div style={{ marginBottom:14 }}>
+          <p style={{ fontSize:11, color:"#7a9e8a", fontWeight:600, marginBottom:8 }}>GOAL PRESETS</p>
+          <div style={{ display:"flex", gap:8 }}>
+            {[{label:"Light",ml:1500,desc:"Sedentary"},{label:"Normal",ml:2000,desc:"Standard"},{label:"Active",ml:2500,desc:"Workout"},{label:"Intense",ml:3000,desc:"Athlete"}].map(p => (
+              <button key={p.label} onClick={() => { setWaterGoal(p.ml); setGoalInput(String(p.ml)); }}
+                style={{ flex:1, padding:"8px 4px", borderRadius:11, border:`1.5px solid ${waterGoal===p.ml?"#2d9e6b":"#e0ece4"}`, background:waterGoal===p.ml?"#e4f5ec":"#fff", cursor:"pointer", textAlign:"center" }}>
+                <p style={{ fontSize:11, fontWeight:700, color:waterGoal===p.ml?"#1e7a4e":"#1a2e24" }}>{p.label}</p>
+                <p style={{ fontSize:9, color:waterGoal===p.ml?"#2d9e6b":"#7a9e8a" }}>{(p.ml/1000).toFixed(1)}L</p>
+                <p style={{ fontSize:8, color:"#7a9e8a" }}>{p.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Today's Log ── */}
+        {drinkLog.length > 0 && (
+          <div style={{ borderTop:"1px solid #f0f5f2", paddingTop:12 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <p style={{ fontSize:11, color:"#7a9e8a", fontWeight:600 }}>TODAY'S LOG</p>
+              <span style={{ fontSize:11, color:"#2d9e6b", fontWeight:600 }}>
+                {drinkLog.length} entries · {drinkLog.reduce((s,e)=>s+e.amount,0).toLocaleString()}ml
+              </span>
+            </div>
+            <div style={{ maxHeight:180, overflowY:"auto" }}>
+              {drinkLog.map((entry, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom: i<drinkLog.length-1?"1px solid #f4f7f5":"none" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ width:32, height:32, borderRadius:10, background:"#e3f0fb", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15 }}>💧</div>
+                    <div>
+                      <p style={{ fontSize:12, fontWeight:600, color:"#1a2e24" }}>{entry.label}</p>
+                      <p style={{ fontSize:10, color:"#7a9e8a" }}>{entry.time}</p>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontFamily:"Fraunces, serif", fontSize:14, fontWeight:700, color:"#1565c0" }}>+{entry.amount}ml</span>
+                    <button onClick={() => { setWater(w=>Math.max(0,w-entry.amount)); setDrinkLog(l=>l.filter((_,idx)=>idx!==i)); }}
+                      style={{ background:"#fde8e8", border:"none", borderRadius:6, width:22, height:22, fontSize:10, color:"#c62828", cursor:"pointer", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tips ── */}
+        <div style={{ marginTop:14, background:"linear-gradient(135deg,#e3f0fb,#e8f5e9)", borderRadius:14, padding:"12px 14px" }}>
+          <p style={{ fontSize:11, color:"#1565c0", fontWeight:700, marginBottom:6 }}>💡 Hydration Tips</p>
+          <p style={{ fontSize:11, color:"#1a2e24", lineHeight:1.75 }}>
+            Start your morning with a full glass of water. Add 500ml on workout days.
+            Thirst is often mistaken for hunger — try water first!
+          </p>
+        </div>
+
+      </div>
+      {/* VITALS */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".2s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 14 }}>VITALS MONITORING</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {[
+            { label: "Heart Rate",     val: "72",     unit: "bpm",   icon: "❤️", color: "#fde8e8", tcolor: "#c62828" },
+            { label: "Blood Pressure", val: "120/80", unit: "mmHg",  icon: "🩺", color: "#e3f0fb", tcolor: "#1565c0" },
+            { label: "Blood Glucose",  val: "98",     unit: "mg/dL", icon: "🩸", color: "#fff3e0", tcolor: "#e65100" },
+          ].map((v, i) => (
+            <div key={i} style={{ background: v.color, borderRadius: 16, padding: 12, textAlign: "center" }}>
+              <span style={{ fontSize: 20 }}>{v.icon}</span>
+              <p style={{ fontFamily: "Fraunces, serif", fontSize: 16, fontWeight: 700, color: v.tcolor, marginTop: 4 }}>{v.val}</p>
+              <p style={{ fontSize: 9, color: "#4a7060" }}>{v.unit}</p>
+              <p style={{ fontSize: 9, color: "#7a9e8a" }}>{v.label}</p>
+            </div>
+          ))}
+        </div>
+        <button className="btn-primary" style={{ width: "100%", marginTop: 12, fontSize: 13 }}>+ Add Reading</button>
+      </div>
+
+      {/* MINDFULNESS */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".25s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 12 }}>MINDFULNESS</p>
+        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>How are you feeling today?</p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+          {["😔","😐","🙂","😊","🤩"].map((e, i) => (
+            <button key={i} className={`mood-btn ${mood === i ? "selected" : ""}`} onClick={() => setMood(i)}>{e}</button>
+          ))}
+        </div>
+        <div style={{ background: "linear-gradient(135deg,#e3f0fb,#e4f5ec)", borderRadius: 16, padding: 16, textAlign: "center" }}>
+          <div style={{ width: 50, height: 50, borderRadius: "50%", background: breatheOn ? "#2d9e6b" : "#90caf9",
+            margin: "0 auto 10px", transition: "all 4s ease",
+            animation: breatheOn ? "breathe 8s infinite ease-in-out" : "none" }}/>
+          <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{breatheOn ? "Breathe in… breathe out…" : "4-7-8 Breathing"}</p>
+          <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => setBreatheOn(b => !b)}>
+            {breatheOn ? "Stop" : "Start Exercise"}
+          </button>
+        </div>
+      </div>
+
+      {/* WORKOUT */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".3s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 12 }}>WORKOUT</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[
+            { label: "Walking", dur: "32 min", cal: 180, icon: "🚶" },
+            { label: "Running", dur: "—",      cal: "—",  icon: "🏃" },
+            { label: "Yoga",    dur: "20 min", cal: 90,   icon: "🧘" },
+          ].map((w, i) => (
+            <div key={i} style={{ flex: 1, background: i === 0 ? "#e4f5ec" : "#f4f7f5", borderRadius: 14, padding: 12, textAlign: "center" }}>
+              <span style={{ fontSize: 22 }}>{w.icon}</span>
+              <p style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{w.label}</p>
+              <p style={{ fontSize: 10, color: "#7a9e8a" }}>{w.dur}</p>
+              <p style={{ fontSize: 10, color: "#2d9e6b", fontWeight: 600 }}>{w.cal !== "—" ? `${w.cal}kcal` : "Start"}</p>
+            </div>
+          ))}
+        </div>
+        <button className="btn-primary" style={{ width: "100%", marginTop: 12, fontSize: 13 }}>+ Log Workout</button>
+      </div>
+
+      {/* HEALTH RECORDS */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".35s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 12 }}>HEALTH RECORDS</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          {["📄 Blood Report\nMar 10, 2026", "🩻 X-Ray\nFeb 22, 2026"].map((r, i) => (
+            <div key={i} style={{ flex: 1, background: "#f4f7f5", borderRadius: 14, padding: 12 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, whiteSpace: "pre-line", lineHeight: 1.6 }}>{r}</p>
+            </div>
+          ))}
+        </div>
+        <button className="btn-primary" style={{ width: "100%", marginTop: 12, fontSize: 13 }}>
+          <Icon name="upload" size={14} color="#fff"/> Upload Record
+        </button>
+      </div>
+
+      {/* Supplements CTA */}
+      <div style={{ background: "linear-gradient(135deg,#1a7a50,#2d9e6b)", borderRadius: 20, padding: 20, color: "#fff", marginBottom: 14 }}>
+        <p style={{ fontSize: 14, fontWeight: 700 }}>Recommended Supplements</p>
+        <p style={{ fontSize: 12, opacity: .8, marginBottom: 12 }}>Based on your health profile</p>
+        <button style={{ background: "#fff", color: "#1a7a50", border: "none", borderRadius: 12, padding: "10px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+          onClick={() => setSubView("store")}>Shop Now →</button>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// EMERGENCY TAB
+// ════════════════════════════════════════════════════════════════════
+const EmergencyTab = ({ setSubView }) => {
+  const [called, setCalled] = useState(null);
+  const emergBtns = [
+    { label: "Call Ambulance",    icon: "🚑", sub: "108 – Medical", bg: "#fde8e8", tc: "#c62828", border: "#f48fb1" },
+    { label: "Call Police",       icon: "🚔", sub: "100 – Security", bg: "#e3f0fb", tc: "#1565c0", border: "#90caf9" },
+    { label: "Call Fire Services",icon: "🚒", sub: "101 – Fire",     bg: "#fff3e0", tc: "#e65100", border: "#ffcc80" },
+    { label: "Nearby Hospitals",  icon: "🏥", sub: "Find closest ER",bg: "#e4f5ec", tc: "#1e7a4e", border: "#a5d6a7" },
+  ];
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <div style={{ paddingTop: 20, marginBottom: 20 }}>
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700 }}>Emergency</h2>
+        <p style={{ color: "#7a9e8a", fontSize: 13 }}>Stay calm. Help is one tap away.</p>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+        {emergBtns.map((b, i) => (
+          <button key={i} className="emerg-btn" style={{ background: b.bg, border: `2px solid ${b.border}`, color: b.tc }}
+            onClick={() => setCalled(b.label)}>
+            <span style={{ fontSize: 32 }}>{b.icon}</span>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 700 }}>{b.label}</p>
+              <p style={{ fontSize: 12, opacity: .75, fontWeight: 400 }}>{b.sub}</p>
+            </div>
+            <div style={{ marginLeft: "auto" }}><Icon name="phone" size={20} color={b.tc}/></div>
+          </button>
+        ))}
+      </div>
+      {called && (
+        <div style={{ background: "#e4f5ec", borderRadius: 18, padding: 16, marginBottom: 16, display: "flex", gap: 12, alignItems: "center" }}>
+          <span style={{ fontSize: 24 }}>📞</span>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#1e7a4e" }}>Connecting to {called}…</p>
+          <button onClick={() => setCalled(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, cursor: "pointer" }}>✕</button>
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {[
+          { label: "CPR Voice Guide",    icon: "🫀", action: () => setSubView("cpr") },
+          { label: "First Aid Guide",    icon: "🩹", action: () => setSubView("firstaid") },
+          { label: "Share Live Location",icon: "📍", action: () => {} },
+          { label: "Emergency Contacts", icon: "👥", action: () => {} },
+        ].map((a, i) => (
+          <div key={i} className="card" style={{ cursor: "pointer", padding: 16 }} onClick={a.action}>
+            <span style={{ fontSize: 28 }}>{a.icon}</span>
+            <p style={{ fontSize: 13, fontWeight: 700, marginTop: 8 }}>{a.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// PROFILE TAB
+// ════════════════════════════════════════════════════════════════════
+const ProfileTab = ({ user, onLogout }) => {
+  const sections = [
+    { icon: "👤", label: "Personal Information",      sub: "Name, DOB, blood group" },
+    { icon: "📞", label: "Emergency Contacts",        sub: "2 contacts added" },
+    { icon: "🛡️", label: "Insurance Details",         sub: "Star Health – Active" },
+    { icon: "📱", label: "Connected Devices",         sub: "Mi Band 9, BP Monitor" },
+    { icon: "🔔", label: "Notification Preferences",  sub: "Medicine, appointments" },
+    { icon: "⚙️", label: "Settings",                  sub: "Language, privacy, data" },
+  ];
+  const initials = (user?.name || "U").split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
+
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <div style={{ paddingTop: 20, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+          <div style={{ width: 70, height: 70, borderRadius: "50%", background: "linear-gradient(135deg,#2d9e6b,#1565c0)", display: "grid", placeItems: "center", fontSize: 26, color: "#fff", fontWeight: 800 }}>
+            {initials}
+          </div>
+          <div>
+            <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700 }}>{user?.name || "User"}</h2>
+            <p style={{ color: "#7a9e8a", fontSize: 13 }}>{user?.email || ""}</p>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              <span className="tag tag-red">A+</span>
+              <span className="tag tag-blue">28 yrs</span>
+              <span className="tag tag-green">72 kg</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {[{ label: "Height", val: "5'10\"" },{ label: "Allergies", val: "None" },{ label: "Conditions", val: "None" }].map((s, i) => (
+            <div key={i} className="metric-pill">
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{s.val}</span>
+              <span style={{ fontSize: 10, color: "#7a9e8a" }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        {sections.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0",
+            borderBottom: i < sections.length - 1 ? "1px solid #f0f5f2" : "none", cursor: "pointer" }}>
+            <span style={{ fontSize: 22, width: 32, textAlign: "center" }}>{s.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 600 }}>{s.label}</p>
+              <p style={{ fontSize: 11, color: "#7a9e8a" }}>{s.sub}</p>
+            </div>
+            <span style={{ color: "#c5dac9", fontSize: 18 }}>›</span>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={onLogout} style={{ width: "100%", marginTop: 16, padding: 14, background: "#fde8e8", color: "#c62828",
+        border: "none", borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <Icon name="signOut" size={18} color="#c62828"/> Sign Out
+      </button>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// SUB-VIEWS
+// ════════════════════════════════════════════════════════════════════
+const CPRGuide = ({ onBack }) => {
+  const [step, setStep] = useState(0);
+  const steps = [
+    { icon: "👀", title: "Check Scene Safety",       body: "Ensure the area is safe for you and the victim. Look for hazards." },
+    { icon: "🫸", title: "Check Responsiveness",     body: "Tap shoulders firmly. Shout 'Are you okay?' twice." },
+    { icon: "📞", title: "Call for Help",             body: "Call 108 or ask someone else to call while you start CPR." },
+    { icon: "🫁", title: "Open the Airway",           body: "Tilt head back, lift chin. Look for breathing (no more than 10 sec)." },
+    { icon: "🫀", title: "Start Chest Compressions",  body: "30 compressions at 100–120/min. Push hard (5–6 cm depth)." },
+    { icon: "💨", title: "Give Rescue Breaths",       body: "2 breaths after every 30 compressions. Seal mouth completely." },
+    { icon: "🔄", title: "Continue CPR",              body: "Repeat 30:2 cycle until AED arrives or victim shows signs of life." },
+  ];
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 16, fontSize: 14 }}>← Back</button>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>CPR Voice Guide</h2>
+      <p style={{ color: "#7a9e8a", fontSize: 13, marginBottom: 20 }}>Step {step + 1} of {steps.length}</p>
+      <div style={{ background: "#f0f5f2", borderRadius: 8, height: 6, marginBottom: 20 }}>
+        <div style={{ width: `${((step + 1) / steps.length) * 100}%`, height: 6, background: "#2d9e6b", borderRadius: 6, transition: "width .4s" }}/>
+      </div>
+      <div className="card slide-in" key={step} style={{ textAlign: "center", padding: 30 }}>
+        <span style={{ fontSize: 52 }}>{steps[step].icon}</span>
+        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: 20, fontWeight: 700, margin: "16px 0 10px" }}>{steps[step].title}</h3>
+        <p style={{ fontSize: 15, color: "#4a7060", lineHeight: 1.7 }}>{steps[step].body}</p>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        <button className="btn-primary" style={{ flex: 1, background: "#f0f5f2", color: "#1a2e24", boxShadow: "none" }}
+          onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}>← Prev</button>
+        <button className="btn-primary" style={{ flex: 1 }}
+          onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}>Next →</button>
+      </div>
+    </div>
+  );
+};
+
+const FirstAidGuide = ({ onBack }) => {
+  const guides = [
+    { icon: "🩹", title: "Cuts & Wounds", steps: ["Clean wound with clean water","Apply pressure with cloth","Use antiseptic cream","Cover with bandage"] },
+    { icon: "🔥", title: "Burns",         steps: ["Cool with running water 10 min","Do NOT use ice or butter","Cover loosely with cling film","Seek medical help for large burns"] },
+    { icon: "🦴", title: "Fractures",     steps: ["Immobilize the area","Do NOT try to realign bone","Apply ice pack (wrapped)","Call ambulance immediately"] },
+    { icon: "😵", title: "Fainting",      steps: ["Lay person on their back","Elevate legs 30cm","Loosen tight clothing","Monitor breathing carefully"] },
+  ];
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 16, fontSize: 14 }}>← Back</button>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>First Aid Guide</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {guides.map((g, i) => (
+          <div key={i} className="card">
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontSize: 28 }}>{g.icon}</span>
+              <h3 style={{ fontWeight: 700, fontSize: 16 }}>{g.title}</h3>
+            </div>
+            {g.steps.map((s, j) => (
+              <div key={j} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: j < g.steps.length - 1 ? "1px solid #f0f5f2" : "none" }}>
+                <span style={{ background: "#e4f5ec", color: "#1e7a4e", borderRadius: "50%", width: 22, height: 22, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{j+1}</span>
+                <p style={{ fontSize: 13, color: "#4a7060" }}>{s}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const MapView = ({ onBack }) => (
+  <div style={{ padding: "0 16px 100px" }}>
+    <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 16, fontSize: 14 }}>← Back</button>
+    <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Nearby Hospitals</h2>
+    <p style={{ color: "#7a9e8a", fontSize: 13, marginBottom: 16 }}>3 hospitals within 5km</p>
+    <div style={{ background: "linear-gradient(135deg,#e3f0fb,#e4f5ec)", borderRadius: 20, height: 200, display: "grid", placeItems: "center", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: "30%", left: "40%", fontSize: 28 }}>📍</div>
+      <div style={{ position: "absolute", top: "55%", left: "65%", fontSize: 22 }}>🏥</div>
+      <div style={{ position: "absolute", top: "20%", left: "60%", fontSize: 22 }}>🏥</div>
+      <div style={{ position: "absolute", top: "60%", left: "25%", fontSize: 22 }}>🏥</div>
+      <p style={{ color: "#7a9e8a", fontSize: 12, position: "absolute", bottom: 12 }}>Map placeholder – enable location</p>
+    </div>
+    {[
+      { name: "AIIMS Delhi",            dist: "1.2 km", time: "4 min" },
+      { name: "Safdarjung Hospital",    dist: "2.8 km", time: "9 min" },
+      { name: "Ram Manohar Lohia",      dist: "4.1 km", time: "14 min" },
+    ].map((h, i) => (
+      <div key={i} className="card" style={{ marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
+        <span style={{ fontSize: 28 }}>🏥</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>{h.name}</p>
+          <p style={{ fontSize: 12, color: "#7a9e8a" }}>{h.dist} • ~{h.time} drive</p>
+        </div>
+        <span className="tag tag-green">Open</span>
+      </div>
+    ))}
+  </div>
+);
+
+const StoreView = ({ onBack }) => {
+  const products = [
+    { name: "Vitamin D3 2000IU",  price: "₹299",   emoji: "🌞", cat: "Vitamins",    rating: "4.8" },
+    { name: "Omega-3 Fish Oil",   price: "₹549",   emoji: "🐟", cat: "Supplements", rating: "4.7" },
+    { name: "Probiotic 10B CFU",  price: "₹399",   emoji: "🦠", cat: "Gut Health",  rating: "4.6" },
+    { name: "Glucometer Kit",     price: "₹1,299", emoji: "💉", cat: "Devices",     rating: "4.9" },
+    { name: "BP Monitor",         price: "₹2,499", emoji: "🩺", cat: "Devices",     rating: "4.7" },
+    { name: "Wellness Pack",      price: "₹899",   emoji: "🎁", cat: "Kits",        rating: "4.8" },
+  ];
+  const [cat, setCat] = useState("All");
+  const cats = ["All", "Vitamins", "Supplements", "Devices", "Kits"];
+  const items = cat === "All" ? products : products.filter(p => p.cat === cat);
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 16, fontSize: 14 }}>← Back</button>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Health Store</h2>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
+        {cats.map(c => (
+          <button key={c} onClick={() => setCat(c)} style={{ background: c === cat ? "#2d9e6b" : "#f0f5f2", color: c === cat ? "#fff" : "#4a7060",
+            border: "none", borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>{c}</button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {items.map((p, i) => (
+          <div key={i} className="store-card" style={{ padding: 16 }}>
+            <span style={{ fontSize: 36 }}>{p.emoji}</span>
+            <span className="tag tag-blue" style={{ marginTop: 8, display: "inline-block" }}>{p.cat}</span>
+            <p style={{ fontWeight: 700, fontSize: 13, marginTop: 6 }}>{p.name}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+              <p style={{ fontFamily: "Fraunces, serif", fontSize: 16, fontWeight: 700, color: "#2d9e6b" }}>{p.price}</p>
+              <span style={{ fontSize: 11, color: "#f57c00" }}>★ {p.rating}</span>
+            </div>
+            <button className="btn-primary" style={{ width: "100%", marginTop: 10, fontSize: 12, padding: "8px" }}>Add to Cart</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ChatbotView = ({ onBack }) => {
+  const [msgs, setMsgs] = useState([{ role: "ai", text: "Hi! I'm your AI health assistant. How can I help you today? 💚" }]);
+  const [input, setInput] = useState("");
+  const endRef = useRef(null);
+  const botReplies = {
+    fever:    "For mild fever, rest and hydrate. Take paracetamol as directed. If >103°F, see a doctor.",
+    headache: "Drink water, rest in a dark room, apply a cold compress. Most headaches resolve with hydration.",
+    cold:     "Warm fluids, steam inhalation, and honey-ginger tea help. Most colds clear in 7–10 days.",
+    cough:    "Try honey-lemon water and steam inhalation. See a doctor if it persists beyond 2 weeks.",
+    default:  "I understand your concern. Based on your symptoms, I recommend consulting a doctor. Would you like to book an appointment? 🩺",
+  };
+  const send = () => {
+    if (!input.trim()) return;
+    const q = input; setInput("");
+    setMsgs(m => [...m, { role: "user", text: q }]);
+    setTimeout(() => {
+      const k = Object.keys(botReplies).find(k => q.toLowerCase().includes(k)) || "default";
+      setMsgs(m => [...m, { role: "ai", text: botReplies[k] }]);
+    }, 900);
+  };
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 70px)" }}>
+      <div style={{ padding: "20px 16px 12px", borderBottom: "1px solid #f0f5f2" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, fontSize: 14, marginBottom: 8 }}>← Back</button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#2d9e6b,#1565c0)", display: "grid", placeItems: "center" }}>
+            <Icon name="brain" size={20} color="#fff"/>
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 14 }}>AI Health Assistant</p>
+            <p style={{ fontSize: 11, color: "#2d9e6b" }}>● Online</p>
+          </div>
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {msgs.map((m, i) => (
+          <div key={i} className={m.role === "user" ? "chat-bubble-user" : "chat-bubble-ai"}>{m.text}</div>
+        ))}
+        <div ref={endRef}/>
+      </div>
+      <div style={{ padding: "12px 16px", borderTop: "1px solid #f0f5f2", display: "flex", gap: 10 }}>
+        <input className="input-field" style={{ flex: 1 }} value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && send()} placeholder="Ask about symptoms, diet, meds…"/>
+        <button className="btn-primary" style={{ padding: "12px 18px" }} onClick={send}>
+          <Icon name="zap" size={16} color="#fff"/>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SymptomChecker = ({ onBack }) => {
+  const [symptoms, setSymptoms] = useState([]);
+  const [result,   setResult]   = useState(null);
+  const allSymptoms = ["Fever","Headache","Cough","Fatigue","Nausea","Chest Pain","Shortness of Breath","Sore Throat","Body Ache","Dizziness"];
+  const toggle = s => setSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  const check = () => {
+    if (symptoms.includes("Chest Pain") || symptoms.includes("Shortness of Breath"))
+      setResult({ level: "urgent",   msg: "Possible cardiac event. Call 108 immediately!", color: "#c62828", bg: "#fde8e8" });
+    else if (symptoms.length >= 3)
+      setResult({ level: "moderate", msg: "Multiple symptoms detected. Please consult a doctor within 24h.", color: "#e65100", bg: "#fff3e0" });
+    else
+      setResult({ level: "mild",     msg: "Mild symptoms. Rest, hydrate, and monitor. See a doctor if it persists.", color: "#1e7a4e", bg: "#e4f5ec" });
+  };
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 16, fontSize: 14 }}>← Back</button>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Symptom Checker</h2>
+      <p style={{ color: "#7a9e8a", fontSize: 13, marginBottom: 20 }}>Select all symptoms you're experiencing</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+        {allSymptoms.map(s => (
+          <button key={s} onClick={() => toggle(s)}
+            style={{ padding: "8px 16px", borderRadius: 20,
+              border: `2px solid ${symptoms.includes(s) ? "#2d9e6b" : "#d4e8da"}`,
+              background: symptoms.includes(s) ? "#e4f5ec" : "#fff",
+              color: symptoms.includes(s) ? "#1e7a4e" : "#4a7060",
+              fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all .2s" }}>
+            {s}
+          </button>
+        ))}
+      </div>
+      <button className="btn-primary" style={{ width: "100%", marginBottom: 16 }} onClick={check} disabled={symptoms.length === 0}>
+        Check Symptoms ({symptoms.length} selected)
+      </button>
+      {result && (
+        <div style={{ background: result.bg, borderRadius: 18, padding: 20, border: `2px solid ${result.color}` }}>
+          <p style={{ fontWeight: 700, fontSize: 15, color: result.color, marginBottom: 6 }}>
+            {result.level === "urgent" ? "🚨" : result.level === "moderate" ? "⚠️" : "✅"} {result.level.toUpperCase()}
+          </p>
+          <p style={{ fontSize: 14, color: "#1a2e24", lineHeight: 1.6 }}>{result.msg}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// MY HEALTH INFO TAB
+// ════════════════════════════════════════════════════════════════════
+const MyHealthInfoTab = ({ user }) => {
+  // ── section toggle state ──
+  const [openSection, setOpenSection] = useState("personal");
+
+  // ── form state ──
+  const [personal, setPersonal] = useState({
+    fullName: user?.name || "", dob: "", gender: "", bloodGroup: "",
+    height: "", weight: "", bmi: "", bodyFat: "",
+  });
+  const [contact, setContact] = useState({
+    phone: "", email: user?.email || "", address: "", city: "", pincode: "",
+    emergName: "", emergRelation: "", emergPhone: "",
+    emergName2: "", emergRelation2: "", emergPhone2: "",
+  });
+  const [medical, setMedical] = useState({
+    conditions: [], conditionOther: "",
+    allergies: [], allergyOther: "",
+    disabilities: "", organDonor: "",
+    covidVaccinated: "", covidDoses: "",
+  });
+  const [vitals, setVitals] = useState({
+    heartRate: "", systolic: "", diastolic: "", temperature: "",
+    glucose: "", spO2: "", respiratoryRate: "",
+  });
+  const [lifestyle, setLifestyle] = useState({
+    smoking: "", alcohol: "", exercise: "", diet: "",
+    sleep: "", stress: "", occupation: "",
+  });
+  const [medications, setMedications] = useState([
+    { name: "", dose: "", frequency: "", since: "" },
+  ]);
+  const [history, setHistory] = useState({
+    pastConditions: "", surgeries: "", hospitalizations: "",
+    familyDiabetes: false, familyHeart: false, familyCancer: false,
+    familyHypertension: false, familyOther: "",
+  });
+  const [insurance, setInsurance] = useState({
+    provider: "", policyNumber: "", type: "", validity: "",
+    coverAmount: "", nominee: "",
+  });
+  const [saved, setSaved] = useState(false);
+
+  // ── computed BMI ──
+  useEffect(() => {
+    const h = parseFloat(personal.height), w = parseFloat(personal.weight);
+    if (h > 0 && w > 0) {
+      const hm = h / 100;
+      const bmi = (w / (hm * hm)).toFixed(1);
+      setPersonal(p => ({ ...p, bmi }));
+    }
+  }, [personal.height, personal.weight]);
+
+  const bmiLabel = (b) => {
+    const n = parseFloat(b);
+    if (!n) return "";
+    if (n < 18.5) return { t: "Underweight", c: "#1565c0" };
+    if (n < 25)   return { t: "Normal",      c: "#1e7a4e" };
+    if (n < 30)   return { t: "Overweight",  c: "#e65100" };
+    return { t: "Obese", c: "#c62828" };
+  };
+
+  const CONDITIONS = ["Diabetes", "Hypertension", "Asthma", "Heart Disease", "Thyroid", "Arthritis", "PCOD/PCOS", "Cancer", "Kidney Disease", "Liver Disease"];
+  const ALLERGIES  = ["Penicillin", "Sulfa drugs", "Aspirin", "Ibuprofen", "Latex", "Peanuts", "Shellfish", "Eggs", "Dust/Pollen", "Bee sting"];
+
+  const toggleArr = (arr, setArr, val) =>
+    setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+
+  const addMed = () => setMedications(m => [...m, { name: "", dose: "", frequency: "", since: "" }]);
+  const updateMed = (i, k, v) => setMedications(m => m.map((med, idx) => idx === i ? { ...med, [k]: v } : med));
+  const removeMed = (i) => setMedications(m => m.filter((_, idx) => idx !== i));
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  // ── styles ──
+  const label = { fontSize: 11, fontWeight: 700, color: "#7a9e8a", letterSpacing: ".05em", marginBottom: 5, display: "block" };
+  const fieldWrap = { marginBottom: 14 };
+  const row2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
+  const sectionBtn = (id) => ({
+    width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+    background: openSection === id ? "linear-gradient(135deg,#e4f5ec,#e3f0fb)" : "#fff",
+    border: openSection === id ? "1.5px solid #2d9e6b" : "1.5px solid #e0ece4",
+    borderRadius: 14, padding: "14px 16px", cursor: "pointer",
+    fontWeight: 700, fontSize: 14, color: openSection === id ? "#1a7a50" : "#1a2e24",
+    transition: "all .2s", textAlign: "left",
+  });
+
+  const sections = [
+    { id: "personal",    label: "👤 Personal Information" },
+    { id: "contact",     label: "📞 Contact & Emergency" },
+    { id: "medical",     label: "🩺 Medical Conditions" },
+    { id: "vitals",      label: "❤️ Current Vitals" },
+    { id: "lifestyle",   label: "🏃 Lifestyle & Habits" },
+    { id: "medications", label: "💊 Current Medications" },
+    { id: "history",     label: "📋 Medical History" },
+    { id: "insurance",   label: "🛡️ Insurance Details" },
+  ];
+
+  return (
+    <div style={{ padding: "0 16px 110px" }}>
+      {/* Header */}
+      <div className="fade-up" style={{ paddingTop: 20, marginBottom: 20 }}>
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700, color: "#1a2e24" }}>My Health Info</h2>
+        <p style={{ color: "#7a9e8a", fontSize: 13, marginTop: 3 }}>Your complete health profile — tap a section to fill in</p>
+      </div>
+
+      {/* Progress summary strip */}
+      <div className="card fade-up" style={{ marginBottom: 18, padding: 16, background: "linear-gradient(135deg,#1a7a50,#2d9e6b)", animationDelay: ".05s" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Profile Completeness</span>
+          <span style={{ color: "#a7f3d0", fontWeight: 700, fontSize: 14 }}>65%</span>
+        </div>
+        <div style={{ background: "rgba(255,255,255,.25)", borderRadius: 8, height: 8 }}>
+          <div style={{ width: "65%", height: 8, background: "#fff", borderRadius: 8 }}/>
+        </div>
+        <p style={{ color: "rgba(255,255,255,.8)", fontSize: 11, marginTop: 8 }}>Complete your profile for personalised health insights</p>
+      </div>
+
+      {/* Accordion sections */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+        {/* ── PERSONAL INFORMATION ── */}
+        <div className="fade-up" style={{ animationDelay: ".08s" }}>
+          <button style={sectionBtn("personal")} onClick={() => setOpenSection(openSection === "personal" ? null : "personal")}>
+            <span>{sections[0].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "personal" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "personal" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>FULL NAME</span>
+                  <input className="input-field" value={personal.fullName} onChange={e => setPersonal(p => ({ ...p, fullName: e.target.value }))} placeholder="Arjun Sharma"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>DATE OF BIRTH</span>
+                  <input className="input-field" type="date" value={personal.dob} onChange={e => setPersonal(p => ({ ...p, dob: e.target.value }))}/>
+                </div>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>GENDER</span>
+                  <select className="input-field" value={personal.gender} onChange={e => setPersonal(p => ({ ...p, gender: e.target.value }))}>
+                    <option value="">Select</option>
+                    {["Male","Female","Non-binary","Prefer not to say"].map(g => <option key={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>BLOOD GROUP</span>
+                  <select className="input-field" value={personal.bloodGroup} onChange={e => setPersonal(p => ({ ...p, bloodGroup: e.target.value }))}>
+                    <option value="">Select</option>
+                    {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(g => <option key={g}>{g}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>HEIGHT (cm)</span>
+                  <input className="input-field" type="number" value={personal.height} onChange={e => setPersonal(p => ({ ...p, height: e.target.value }))} placeholder="175"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>WEIGHT (kg)</span>
+                  <input className="input-field" type="number" value={personal.weight} onChange={e => setPersonal(p => ({ ...p, weight: e.target.value }))} placeholder="72"/>
+                </div>
+              </div>
+              {personal.bmi && (
+                <div style={{ background: "#f0faf4", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                  <span style={{ fontSize: 22 }}>📊</span>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2e24" }}>BMI: {personal.bmi}</span>
+                    {bmiLabel(personal.bmi) && <span className="tag" style={{ background: bmiLabel(personal.bmi).c + "22", color: bmiLabel(personal.bmi).c, marginLeft: 8 }}>{bmiLabel(personal.bmi).t}</span>}
+                  </div>
+                </div>
+              )}
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>BODY FAT %</span>
+                  <input className="input-field" type="number" value={personal.bodyFat} onChange={e => setPersonal(p => ({ ...p, bodyFat: e.target.value }))} placeholder="20"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>ORGAN DONOR</span>
+                  <select className="input-field" value={personal.organDonor || ""} onChange={e => setPersonal(p => ({ ...p, organDonor: e.target.value }))}>
+                    <option value="">Select</option>
+                    <option>Yes</option><option>No</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── CONTACT & EMERGENCY ── */}
+        <div className="fade-up" style={{ animationDelay: ".1s" }}>
+          <button style={sectionBtn("contact")} onClick={() => setOpenSection(openSection === "contact" ? null : "contact")}>
+            <span>{sections[1].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "contact" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "contact" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>PHONE</span>
+                  <input className="input-field" type="tel" value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} placeholder="+91 98765 43210"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>EMAIL</span>
+                  <input className="input-field" type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} placeholder="you@email.com"/>
+                </div>
+              </div>
+              <div style={fieldWrap}>
+                <span style={label}>ADDRESS</span>
+                <input className="input-field" value={contact.address} onChange={e => setContact(c => ({ ...c, address: e.target.value }))} placeholder="Street / Flat, Society"/>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>CITY</span>
+                  <input className="input-field" value={contact.city} onChange={e => setContact(c => ({ ...c, city: e.target.value }))} placeholder="Delhi"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>PINCODE</span>
+                  <input className="input-field" value={contact.pincode} onChange={e => setContact(c => ({ ...c, pincode: e.target.value }))} placeholder="110001"/>
+                </div>
+              </div>
+              <div style={{ borderTop: "1px solid #f0f5f2", paddingTop: 14, marginTop: 4, marginBottom: 12 }}>
+                <p style={{ fontWeight: 700, fontSize: 13, color: "#c62828", marginBottom: 12 }}>🚨 Emergency Contact 1</p>
+                <div style={row2}>
+                  <div style={fieldWrap}>
+                    <span style={label}>NAME</span>
+                    <input className="input-field" value={contact.emergName} onChange={e => setContact(c => ({ ...c, emergName: e.target.value }))} placeholder="Contact name"/>
+                  </div>
+                  <div style={fieldWrap}>
+                    <span style={label}>RELATION</span>
+                    <input className="input-field" value={contact.emergRelation} onChange={e => setContact(c => ({ ...c, emergRelation: e.target.value }))} placeholder="Spouse / Parent"/>
+                  </div>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>PHONE</span>
+                  <input className="input-field" type="tel" value={contact.emergPhone} onChange={e => setContact(c => ({ ...c, emergPhone: e.target.value }))} placeholder="+91 98765 00000"/>
+                </div>
+              </div>
+              <div style={{ borderTop: "1px solid #f0f5f2", paddingTop: 14 }}>
+                <p style={{ fontWeight: 700, fontSize: 13, color: "#c62828", marginBottom: 12 }}>🚨 Emergency Contact 2</p>
+                <div style={row2}>
+                  <div style={fieldWrap}>
+                    <span style={label}>NAME</span>
+                    <input className="input-field" value={contact.emergName2} onChange={e => setContact(c => ({ ...c, emergName2: e.target.value }))} placeholder="Contact name"/>
+                  </div>
+                  <div style={fieldWrap}>
+                    <span style={label}>RELATION</span>
+                    <input className="input-field" value={contact.emergRelation2} onChange={e => setContact(c => ({ ...c, emergRelation2: e.target.value }))} placeholder="Sibling / Friend"/>
+                  </div>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>PHONE</span>
+                  <input className="input-field" type="tel" value={contact.emergPhone2} onChange={e => setContact(c => ({ ...c, emergPhone2: e.target.value }))} placeholder="+91 98765 11111"/>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── MEDICAL CONDITIONS ── */}
+        <div className="fade-up" style={{ animationDelay: ".12s" }}>
+          <button style={sectionBtn("medical")} onClick={() => setOpenSection(openSection === "medical" ? null : "medical")}>
+            <span>{sections[2].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "medical" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "medical" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              <div style={fieldWrap}>
+                <span style={label}>EXISTING CONDITIONS (select all that apply)</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 6 }}>
+                  {CONDITIONS.map(c => (
+                    <button key={c} onClick={() => toggleArr(medical.conditions, arr => setMedical(m => ({ ...m, conditions: arr })), c)}
+                      style={{ padding: "7px 12px", borderRadius: 20, border: `2px solid ${medical.conditions.includes(c) ? "#2d9e6b" : "#d4e8da"}`,
+                        background: medical.conditions.includes(c) ? "#e4f5ec" : "#fff",
+                        color: medical.conditions.includes(c) ? "#1e7a4e" : "#4a7060",
+                        fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <input className="input-field" style={{ marginTop: 10 }} value={medical.conditionOther}
+                  onChange={e => setMedical(m => ({ ...m, conditionOther: e.target.value }))} placeholder="Other condition (type here)…"/>
+              </div>
+              <div style={fieldWrap}>
+                <span style={label}>KNOWN ALLERGIES</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 6 }}>
+                  {ALLERGIES.map(a => (
+                    <button key={a} onClick={() => toggleArr(medical.allergies, arr => setMedical(m => ({ ...m, allergies: arr })), a)}
+                      style={{ padding: "7px 12px", borderRadius: 20, border: `2px solid ${medical.allergies.includes(a) ? "#e53935" : "#d4e8da"}`,
+                        background: medical.allergies.includes(a) ? "#fde8e8" : "#fff",
+                        color: medical.allergies.includes(a) ? "#c62828" : "#4a7060",
+                        fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
+                      {a}
+                    </button>
+                  ))}
+                </div>
+                <input className="input-field" style={{ marginTop: 10 }} value={medical.allergyOther}
+                  onChange={e => setMedical(m => ({ ...m, allergyOther: e.target.value }))} placeholder="Other allergy (type here)…"/>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>PHYSICAL DISABILITY</span>
+                  <input className="input-field" value={medical.disabilities}
+                    onChange={e => setMedical(m => ({ ...m, disabilities: e.target.value }))} placeholder="None / describe"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>ORGAN DONOR</span>
+                  <select className="input-field" value={medical.organDonor} onChange={e => setMedical(m => ({ ...m, organDonor: e.target.value }))}>
+                    <option value="">Select</option><option>Yes</option><option>No</option>
+                  </select>
+                </div>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>COVID VACCINATED</span>
+                  <select className="input-field" value={medical.covidVaccinated} onChange={e => setMedical(m => ({ ...m, covidVaccinated: e.target.value }))}>
+                    <option value="">Select</option><option>Yes</option><option>No</option><option>Partial</option>
+                  </select>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>NO. OF DOSES</span>
+                  <select className="input-field" value={medical.covidDoses} onChange={e => setMedical(m => ({ ...m, covidDoses: e.target.value }))}>
+                    <option value="">Select</option>
+                    {["1","2","3 (Booster)"].map(d => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── CURRENT VITALS ── */}
+        <div className="fade-up" style={{ animationDelay: ".14s" }}>
+          <button style={sectionBtn("vitals")} onClick={() => setOpenSection(openSection === "vitals" ? null : "vitals")}>
+            <span>{sections[3].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "vitals" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "vitals" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              {[
+                [{ label: "HEART RATE (bpm)", key: "heartRate", ph: "72", icon: "❤️" }, { label: "BODY TEMP (°F)", key: "temperature", ph: "98.6", icon: "🌡️" }],
+                [{ label: "BLOOD PRESSURE - SYSTOLIC", key: "systolic", ph: "120", icon: "🩺" }, { label: "DIASTOLIC", key: "diastolic", ph: "80", icon: "🩺" }],
+                [{ label: "BLOOD GLUCOSE (mg/dL)", key: "glucose", ph: "98", icon: "🩸" }, { label: "SpO2 (%)", key: "spO2", ph: "98", icon: "🫁" }],
+                [{ label: "RESPIRATORY RATE (/min)", key: "respiratoryRate", ph: "16", icon: "💨" }],
+              ].map((rowFields, ri) => (
+                <div key={ri} style={{ ...row2, gridTemplateColumns: rowFields.length === 1 ? "1fr" : "1fr 1fr", marginBottom: 0 }}>
+                  {rowFields.map(f => (
+                    <div key={f.key} style={fieldWrap}>
+                      <span style={label}>{f.icon} {f.label}</span>
+                      <input className="input-field" type="number" value={vitals[f.key]}
+                        onChange={e => setVitals(v => ({ ...v, [f.key]: e.target.value }))} placeholder={f.ph}/>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{ background: "#e3f0fb", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#1565c0", fontWeight: 500 }}>
+                💡 Tip: Enter your most recent readings. These help in emergency care decisions.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── LIFESTYLE ── */}
+        <div className="fade-up" style={{ animationDelay: ".16s" }}>
+          <button style={sectionBtn("lifestyle")} onClick={() => setOpenSection(openSection === "lifestyle" ? null : "lifestyle")}>
+            <span>{sections[4].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "lifestyle" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "lifestyle" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              {[
+                { label: "SMOKING", key: "smoking",   opts: ["Non-smoker","Occasional","Regular","Former smoker"] },
+                { label: "ALCOHOL", key: "alcohol",   opts: ["Never","Occasional","Moderate","Regular"] },
+                { label: "EXERCISE FREQUENCY", key: "exercise", opts: ["Sedentary","1–2x/week","3–4x/week","Daily"] },
+                { label: "DIET TYPE", key: "diet",    opts: ["Vegetarian","Vegan","Non-vegetarian","Eggetarian","Jain"] },
+                { label: "AVERAGE SLEEP", key: "sleep", opts: ["<5 hrs","5–6 hrs","7–8 hrs",">8 hrs"] },
+                { label: "STRESS LEVEL", key: "stress", opts: ["Low","Moderate","High","Very High"] },
+              ].map(f => (
+                <div key={f.key} style={fieldWrap}>
+                  <span style={label}>{f.label}</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    {f.opts.map(o => (
+                      <button key={o} onClick={() => setLifestyle(l => ({ ...l, [f.key]: o }))}
+                        style={{ padding: "7px 12px", borderRadius: 20,
+                          border: `2px solid ${lifestyle[f.key] === o ? "#2d9e6b" : "#d4e8da"}`,
+                          background: lifestyle[f.key] === o ? "#e4f5ec" : "#fff",
+                          color: lifestyle[f.key] === o ? "#1e7a4e" : "#4a7060",
+                          fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all .2s" }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div style={fieldWrap}>
+                <span style={label}>OCCUPATION</span>
+                <input className="input-field" value={lifestyle.occupation}
+                  onChange={e => setLifestyle(l => ({ ...l, occupation: e.target.value }))} placeholder="Software Engineer / Teacher…"/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── CURRENT MEDICATIONS ── */}
+        <div className="fade-up" style={{ animationDelay: ".18s" }}>
+          <button style={sectionBtn("medications")} onClick={() => setOpenSection(openSection === "medications" ? null : "medications")}>
+            <span>{sections[5].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "medications" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "medications" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              {medications.map((med, i) => (
+                <div key={i} style={{ background: "#f4f7f5", borderRadius: 14, padding: 14, marginBottom: 10, position: "relative" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: "#2d9e6b" }}>💊 Medicine {i + 1}</span>
+                    {medications.length > 1 && (
+                      <button onClick={() => removeMed(i)} style={{ background: "#fde8e8", border: "none", color: "#c62828", borderRadius: 8, padding: "3px 9px", fontSize: 12, cursor: "pointer", fontWeight: 700 }}>✕ Remove</button>
+                    )}
+                  </div>
+                  <div style={row2}>
+                    <div style={fieldWrap}>
+                      <span style={label}>MEDICINE NAME</span>
+                      <input className="input-field" value={med.name} onChange={e => updateMed(i, "name", e.target.value)} placeholder="Metformin"/>
+                    </div>
+                    <div style={fieldWrap}>
+                      <span style={label}>DOSAGE</span>
+                      <input className="input-field" value={med.dose} onChange={e => updateMed(i, "dose", e.target.value)} placeholder="500mg"/>
+                    </div>
+                  </div>
+                  <div style={row2}>
+                    <div style={fieldWrap}>
+                      <span style={label}>FREQUENCY</span>
+                      <select className="input-field" value={med.frequency} onChange={e => updateMed(i, "frequency", e.target.value)}>
+                        <option value="">Select</option>
+                        {["Once daily","Twice daily","Three times daily","As needed","Weekly","Monthly"].map(f => <option key={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div style={fieldWrap}>
+                      <span style={label}>TAKING SINCE</span>
+                      <input className="input-field" type="month" value={med.since} onChange={e => updateMed(i, "since", e.target.value)}/>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button onClick={addMed} className="btn-primary" style={{ width: "100%", fontSize: 13, background: "linear-gradient(135deg,#e3f0fb,#e4f5ec)", color: "#1565c0", boxShadow: "none", border: "1.5px dashed #90caf9" }}>
+                + Add Another Medicine
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── MEDICAL HISTORY ── */}
+        <div className="fade-up" style={{ animationDelay: ".2s" }}>
+          <button style={sectionBtn("history")} onClick={() => setOpenSection(openSection === "history" ? null : "history")}>
+            <span>{sections[6].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "history" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "history" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              {[
+                { label: "PAST MEDICAL CONDITIONS", key: "pastConditions", ph: "e.g. Typhoid in 2018, Dengue in 2020…" },
+                { label: "SURGERIES / OPERATIONS", key: "surgeries",      ph: "e.g. Appendectomy 2015, Knee surgery 2021…" },
+                { label: "HOSPITALIZATIONS",         key: "hospitalizations", ph: "e.g. Pneumonia, 3 days, AIIMS 2022…" },
+              ].map(f => (
+                <div key={f.key} style={fieldWrap}>
+                  <span style={label}>{f.label}</span>
+                  <textarea className="input-field" value={history[f.key]}
+                    onChange={e => setHistory(h => ({ ...h, [f.key]: e.target.value }))}
+                    placeholder={f.ph} rows={2}
+                    style={{ resize: "none", lineHeight: 1.6 }}/>
+                </div>
+              ))}
+              <div style={fieldWrap}>
+                <span style={label}>FAMILY MEDICAL HISTORY</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+                  {[["familyDiabetes","Diabetes"],["familyHeart","Heart Disease"],["familyCancer","Cancer"],["familyHypertension","Hypertension"]].map(([k, lbl]) => (
+                    <label key={k} style={{ display: "flex", alignItems: "center", gap: 8, background: history[k] ? "#e4f5ec" : "#f4f7f5", borderRadius: 10, padding: "9px 12px", cursor: "pointer", border: `1.5px solid ${history[k] ? "#2d9e6b" : "#e0ece4"}` }}>
+                      <input type="checkbox" checked={history[k]} onChange={e => setHistory(h => ({ ...h, [k]: e.target.checked }))} style={{ accentColor: "#2d9e6b", width: 15, height: 15 }}/>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: history[k] ? "#1e7a4e" : "#4a7060" }}>{lbl}</span>
+                    </label>
+                  ))}
+                </div>
+                <input className="input-field" style={{ marginTop: 10 }} value={history.familyOther}
+                  onChange={e => setHistory(h => ({ ...h, familyOther: e.target.value }))} placeholder="Other family history…"/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── INSURANCE ── */}
+        <div className="fade-up" style={{ animationDelay: ".22s" }}>
+          <button style={sectionBtn("insurance")} onClick={() => setOpenSection(openSection === "insurance" ? null : "insurance")}>
+            <span>{sections[7].label}</span>
+            <span style={{ fontSize: 18, transform: openSection === "insurance" ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+          </button>
+          {openSection === "insurance" && (
+            <div className="card slide-in" style={{ borderRadius: "0 0 16px 16px", marginTop: -6, paddingTop: 22 }}>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>INSURANCE PROVIDER</span>
+                  <input className="input-field" value={insurance.provider}
+                    onChange={e => setInsurance(i => ({ ...i, provider: e.target.value }))} placeholder="Star Health / LIC…"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>POLICY NUMBER</span>
+                  <input className="input-field" value={insurance.policyNumber}
+                    onChange={e => setInsurance(i => ({ ...i, policyNumber: e.target.value }))} placeholder="POL123456"/>
+                </div>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>PLAN TYPE</span>
+                  <select className="input-field" value={insurance.type} onChange={e => setInsurance(i => ({ ...i, type: e.target.value }))}>
+                    <option value="">Select</option>
+                    {["Individual","Family Floater","Group","Senior Citizen","Critical Illness"].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>VALID TILL</span>
+                  <input className="input-field" type="month" value={insurance.validity}
+                    onChange={e => setInsurance(i => ({ ...i, validity: e.target.value }))}/>
+                </div>
+              </div>
+              <div style={row2}>
+                <div style={fieldWrap}>
+                  <span style={label}>COVER AMOUNT</span>
+                  <input className="input-field" value={insurance.coverAmount}
+                    onChange={e => setInsurance(i => ({ ...i, coverAmount: e.target.value }))} placeholder="₹5,00,000"/>
+                </div>
+                <div style={fieldWrap}>
+                  <span style={label}>NOMINEE</span>
+                  <input className="input-field" value={insurance.nominee}
+                    onChange={e => setInsurance(i => ({ ...i, nominee: e.target.value }))} placeholder="Spouse / Parent"/>
+                </div>
+              </div>
+              <div style={{ background: "#e4f5ec", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#1e7a4e", fontWeight: 500 }}>
+                🛡️ Your insurance details are stored securely and used only in emergencies.
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>{/* end accordion */}
+
+      {/* Save button */}
+      <div style={{ marginTop: 24 }}>
+        <button className="btn-primary" onClick={handleSave}
+          style={{ width: "100%", fontSize: 15, padding: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          {saved ? <><Icon name="check" size={18} color="#fff"/> Saved Successfully!</> : "💾  Save Health Profile"}
+        </button>
+        {saved && (
+          <div style={{ background: "#e4f5ec", borderRadius: 14, padding: "12px 16px", marginTop: 12, textAlign: "center" }}>
+            <p style={{ color: "#1e7a4e", fontWeight: 600, fontSize: 13 }}>✅ Your health profile has been saved. Doctors can now access this in emergencies.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// STEP COUNTER
+// ════════════════════════════════════════════════════════════════════
+const StepCounter = ({ onBack }) => {
+  const GOAL = 6000;
+  const [steps,      setSteps]      = useState(4821);
+  const [isTracking, setIsTracking] = useState(false);
+  const [goalInput,  setGoalInput]  = useState(String(GOAL));
+  const [goal,       setGoal]       = useState(GOAL);
+  const [editGoal,   setEditGoal]   = useState(false);
+  const history = [
+    { day: "Mon", steps: 3200 }, { day: "Tue", steps: 5800 },
+    { day: "Wed", steps: 6100 }, { day: "Thu", steps: 4500 },
+    { day: "Fri", steps: 6000 }, { day: "Sat", steps: 5200 },
+    { day: "Sun", steps: 4821 },
+  ];
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isTracking) { clearInterval(timerRef.current); return; }
+    timerRef.current = setInterval(() => {
+      setSteps(s => Math.min(s + Math.floor(Math.random() * 3 + 1), 99999));
+    }, 550);
+    return () => clearInterval(timerRef.current);
+  }, [isTracking]);
+
+  const pct      = Math.min((steps / goal) * 100, 100);
+  const calories = Math.round(steps * 0.065);
+  const km       = (steps * 0.00076).toFixed(2);
+  const activeMin= Math.round(steps / 100);
+  const goalMet  = steps >= goal;
+  const r = 90, stroke = 12, circ = 2 * Math.PI * r;
+  const dashOffset = circ - (pct / 100) * circ;
+
+  const milestones = [
+    { at: 2000, label: "Warm-up",      icon: "🌱" },
+    { at: 4000, label: "Halfway",      icon: "⚡" },
+    { at: 6000, label: "Goal!",        icon: "🏆" },
+    { at: 8000, label: "Overachiever", icon: "🔥" },
+    { at:10000, label: "Champion",     icon: "👑" },
+  ];
+  const nextMilestone = milestones.find(m => m.at > steps);
+  const lastMilestone = [...milestones].reverse().find(m => m.at <= steps);
+  const ringColor = goalMet ? "#2d9e6b" : pct > 60 ? "#2d9e6b" : pct > 30 ? "#f57c00" : "#e53935";
+
+  const add   = (n) => setSteps(s => Math.min(s + n, 99999));
+  const reset = () => { setIsTracking(false); setSteps(0); };
+  const saveGoal = () => { const v = parseInt(goalInput); if (v > 0) setGoal(v); setEditGoal(false); };
+
+  return (
+    <div style={{ padding: "0 16px 100px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#2d9e6b", fontWeight: 600, paddingTop: 20, marginBottom: 4, fontSize: 14 }}>← Back</button>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 24, fontWeight: 700, marginBottom: 2 }}>Step Counter</h2>
+      <p style={{ color: "#7a9e8a", fontSize: 13, marginBottom: 20 }}>
+        {isTracking ? "🟢 Tracking — walk with your phone" : "Tap Start to begin tracking your steps"}
+      </p>
+
+      {/* BIG RING */}
+      <div className="card fade-up" style={{ marginBottom: 14, textAlign: "center", padding: "28px 20px" }}>
+        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width={200} height={200} style={{ transform: "rotate(-90deg)" }}>
+            <circle cx={100} cy={100} r={r} fill="none" stroke="#f0f5f2" strokeWidth={stroke}/>
+            <circle cx={100} cy={100} r={r} fill="none" stroke={ringColor} strokeWidth={stroke}
+              strokeDasharray={circ} strokeDashoffset={dashOffset} strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset .6s cubic-bezier(.4,0,.2,1), stroke .4s" }}/>
+          </svg>
+          <div style={{ position: "absolute", textAlign: "center" }}>
+            <span style={{ fontSize: 36 }}>{goalMet ? "🏆" : isTracking ? "🚶" : "👟"}</span>
+            <p style={{ fontFamily: "Fraunces, serif", fontSize: 34, fontWeight: 700, color: "#1a2e24", lineHeight: 1 }}>
+              {steps.toLocaleString()}
+            </p>
+            <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500 }}>steps</p>
+            <p style={{ fontSize: 11, color: goalMet ? "#2d9e6b" : "#7a9e8a", fontWeight: 600, marginTop: 2 }}>
+              {goalMet ? "Goal reached! 🎉" : `${(goal - steps).toLocaleString()} to go`}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8 }}>
+          {editGoal ? (
+            <>
+              <input value={goalInput} onChange={e => setGoalInput(e.target.value)} type="number"
+                style={{ width: 90, padding: "5px 10px", borderRadius: 10, border: "1.5px solid #2d9e6b", fontSize: 13, fontWeight: 600, textAlign: "center", outline: "none" }}/>
+              <button onClick={saveGoal} style={{ background: "#2d9e6b", color: "#fff", border: "none", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Save</button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 12, color: "#7a9e8a" }}>Daily goal: <strong style={{ color: "#1a2e24" }}>{goal.toLocaleString()} steps</strong></span>
+              <button onClick={() => setEditGoal(true)} style={{ background: "#e4f5ec", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#2d9e6b", fontWeight: 700, cursor: "pointer" }}>Edit</button>
+            </>
+          )}
+        </div>
+
+        <div style={{ background: "#f0f5f2", borderRadius: 8, height: 6, margin: "14px 0 6px" }}>
+          <div style={{ width: `${pct}%`, height: 6, background: `linear-gradient(90deg,${ringColor},#64d6a0)`, borderRadius: 8, transition: "width .6s ease" }}/>
+        </div>
+        <p style={{ fontSize: 11, color: "#7a9e8a" }}>{pct.toFixed(0)}% of daily goal</p>
+      </div>
+
+      {/* STATS */}
+      <div className="fade-up" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 14, animationDelay: ".05s" }}>
+        {[
+          { icon: "🔥", val: calories, unit: "kcal", label: "Calories" },
+          { icon: "📍", val: km,       unit: "km",   label: "Distance" },
+          { icon: "⏱️", val: activeMin,unit: "min",  label: "Active" },
+        ].map((s, i) => (
+          <div key={i} className="card" style={{ textAlign: "center", padding: "14px 8px" }}>
+            <span style={{ fontSize: 22 }}>{s.icon}</span>
+            <p style={{ fontFamily: "Fraunces, serif", fontSize: 20, fontWeight: 700, color: "#1a2e24", marginTop: 4 }}>{s.val}</p>
+            <p style={{ fontSize: 9, color: "#7a9e8a" }}>{s.unit}</p>
+            <p style={{ fontSize: 9, color: "#7a9e8a", fontWeight: 600 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* CONTROLS */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".08s" }}>
+        <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 14 }}>CONTROLS</p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          <button onClick={() => setIsTracking(t => !t)}
+            style={{ flex: 2, padding: "14px", borderRadius: 14, border: "none", fontWeight: 700, fontSize: 15, cursor: "pointer",
+              background: isTracking ? "linear-gradient(135deg,#e53935,#b71c1c)" : "linear-gradient(135deg,#2d9e6b,#1a7a50)",
+              color: "#fff", boxShadow: isTracking ? "0 4px 14px rgba(229,57,53,.35)" : "0 4px 14px rgba(45,158,107,.35)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .25s" }}>
+            {isTracking
+              ? <><span style={{ fontSize: 18 }}>⏸</span> Pause</>
+              : <><span style={{ fontSize: 18 }}>▶</span> {steps > 0 ? "Resume" : "Start"}</>}
+          </button>
+          <button onClick={reset}
+            style={{ flex: 1, padding: "14px", borderRadius: 14, border: "1.5px solid #e0ece4", background: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", color: "#c62828", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <span style={{ fontSize: 16 }}>↺</span> Reset
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: "#7a9e8a", marginBottom: 8, fontWeight: 500 }}>ADD STEPS MANUALLY</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[100, 250, 500, 1000].map(n => (
+            <button key={n} onClick={() => add(n)}
+              style={{ flex: 1, padding: "9px 4px", borderRadius: 11, border: "1.5px solid #c8e6c9", background: "#f0faf4", fontWeight: 700, fontSize: 12, color: "#1e7a4e", cursor: "pointer", transition: "all .15s" }}>
+              +{n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* MILESTONES */}
+      {(lastMilestone || nextMilestone) && (
+        <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".1s", background: goalMet ? "linear-gradient(135deg,#e4f5ec,#e3f0fb)" : "#fff" }}>
+          <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500, marginBottom: 12 }}>MILESTONES</p>
+          <div style={{ display: "flex", gap: 0, overflowX: "auto", paddingBottom: 4 }}>
+            {milestones.map((m, i) => {
+              const reached = steps >= m.at;
+              const isCurrent = lastMilestone?.at === m.at;
+              return (
+                <div key={i} style={{ flex: "0 0 auto", textAlign: "center", padding: "0 10px", borderRight: i < milestones.length - 1 ? "1px solid #f0f5f2" : "none" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", margin: "0 auto 6px", background: reached ? (isCurrent ? "#2d9e6b" : "#e4f5ec") : "#f4f7f5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, border: isCurrent ? "2px solid #2d9e6b" : "2px solid transparent", transition: "all .4s" }}>{m.icon}</div>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: reached ? "#1e7a4e" : "#b0c4b8" }}>{m.at.toLocaleString()}</p>
+                  <p style={{ fontSize: 9, color: reached ? "#2d9e6b" : "#c5d9cc" }}>{m.label}</p>
+                </div>
+              );
+            })}
+          </div>
+          {nextMilestone && !goalMet && (
+            <div style={{ marginTop: 12, background: "#f0faf4", borderRadius: 10, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{nextMilestone.icon}</span>
+              <p style={{ fontSize: 12, color: "#1e7a4e", fontWeight: 600 }}>{(nextMilestone.at - steps).toLocaleString()} more steps to reach <strong>{nextMilestone.label}</strong>!</p>
+            </div>
+          )}
+          {goalMet && (
+            <div style={{ marginTop: 12, background: "linear-gradient(135deg,#2d9e6b,#1a7a50)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 24 }}>🎉</span>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Daily goal crushed!</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,.8)" }}>You've walked {steps.toLocaleString()} steps today</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WEEKLY HISTORY */}
+      <div className="card fade-up" style={{ marginBottom: 14, animationDelay: ".12s" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <p style={{ fontSize: 12, color: "#7a9e8a", fontWeight: 500 }}>WEEKLY HISTORY</p>
+          <span style={{ fontSize: 11, color: "#2d9e6b", fontWeight: 600 }}>Avg: {Math.round(history.reduce((s,d)=>s+d.steps,0)/history.length).toLocaleString()} steps/day</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
+          {history.map((d, i) => {
+            const isToday = i === history.length - 1;
+            const h = Math.max((d.steps / 10000) * 100, 8);
+            const met = d.steps >= goal;
+            return (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <p style={{ fontSize: 9, color: isToday ? "#2d9e6b" : "#7a9e8a", fontWeight: isToday ? 700 : 400 }}>
+                  {d.steps >= 1000 ? (d.steps/1000).toFixed(1)+"k" : d.steps}
+                </p>
+                <div style={{ width: "100%", height: `${h}%`, borderRadius: "5px 5px 0 0",
+                  background: met ? "linear-gradient(180deg,#2d9e6b,#1a7a50)" : isToday ? "linear-gradient(180deg,#64b5f6,#1565c0)" : "#d4e8da",
+                  border: isToday ? "2px solid #1565c0" : "none", transition: "height .8s ease", position: "relative" }}>
+                  {met && <span style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)", fontSize: 10 }}>✓</span>}
+                </div>
+                <p style={{ fontSize: 9, color: isToday ? "#1565c0" : "#7a9e8a", fontWeight: isToday ? 700 : 400 }}>{d.day}</p>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
+          {[["#2d9e6b","Goal met"],["#64b5f6","Today"],["#d4e8da","Other"]].map(([c,l]) => (
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: c }}/>
+              <span style={{ fontSize: 10, color: "#7a9e8a" }}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TIPS */}
+      <div className="card fade-up" style={{ animationDelay: ".15s", background: "linear-gradient(135deg,#e3f0fb,#e4f5ec)" }}>
+        <p style={{ fontSize: 12, color: "#1565c0", fontWeight: 700, marginBottom: 10 }}>💡 WALKING TIPS</p>
+        {["Take the stairs instead of the elevator — adds ~200 steps per floor.","Park farther away from your destination to walk more.","A 10-minute walk after each meal helps digestion and adds ~1,200 steps.","Set hourly reminders to stand and walk for 2 minutes."].map((tip, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderBottom: i < 3 ? "1px solid rgba(0,0,0,.05)" : "none" }}>
+            <span style={{ color: "#2d9e6b", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{i+1}.</span>
+            <p style={{ fontSize: 12, color: "#1a2e24", lineHeight: 1.6 }}>{tip}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════
+// DASHBOARD SHELL
+// ════════════════════════════════════════════════════════════════════
+function Dashboard({ user, onLogout }) {
+  const [tab,      setTab]     = useState("home");
+  const [subView,  setSubView] = useState(null);
+  const [sosFlash, setSosFlash]= useState(false);
+
+  const handleSOS = () => {
+    setSosFlash(true);
+    setTimeout(() => setSosFlash(false), 2000);
+    setTab("emergency");
+    setSubView(null);
+  };
+
+  const navItems = [
+    { id: "home",      label: "Home",      icon: "home" },
+    { id: "health",    label: "Health",    icon: "heart" },
+    { id: "myinfo",    label: "My Info",   icon: "shield" },
+    { id: "emergency", label: "Emergency", icon: "emergency" },
+    { id: "profile",   label: "Profile",   icon: "user" },
+  ];
+
+  const renderSubView = () => {
+    if (subView === "cpr")      return <CPRGuide       onBack={() => setSubView(null)}/>;
+    if (subView === "firstaid") return <FirstAidGuide  onBack={() => setSubView(null)}/>;
+    if (subView === "map")      return <MapView         onBack={() => setSubView(null)}/>;
+    if (subView === "store")    return <StoreView       onBack={() => setSubView(null)}/>;
+    if (subView === "chatbot")  return <ChatbotView     onBack={() => setSubView(null)}/>;
+    if (subView === "symptom")  return <SymptomChecker  onBack={() => setSubView(null)}/>;
+    if (subView === "stepcounter") return <StepCounter onBack={() => setSubView(null)}/>;
+    return null;
+  };
+
+  const renderTab = () => {
+    if (tab === "home")      return <HomeTab      user={user} setSubView={setSubView}/>;
+    if (tab === "health")    return <HealthTab    setSubView={setSubView}/>;
+    if (tab === "myinfo")    return <MyHealthInfoTab user={user}/>;
+    if (tab === "emergency") return <EmergencyTab setSubView={setSubView}/>;
+    if (tab === "profile")   return <ProfileTab   user={user} onLogout={onLogout}/>;
+  };
+
+  return (
+    <div style={{ maxWidth: 430, margin: "0 auto", background: "#f4f7f5", minHeight: "100vh", position: "relative" }}>
+
+      {/* TOP NAVBAR */}
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(244,247,245,.95)", backdropFilter: "blur(12px)",
+        borderBottom: "1px solid #e0ece4", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#2d9e6b,#1565c0)", display: "grid", placeItems: "center" }}>
+            <span style={{ color: "#fff", fontSize: 16 }}>⚕</span>
+          </div>
+          <span style={{ fontFamily: "Fraunces, serif", fontWeight: 700, fontSize: 18, color: "#1a2e24" }}>SwasthayaLink</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button onClick={() => { setSubView("symptom"); }} style={{ background: "#e4f5ec", border: "none", borderRadius: 10, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <Icon name="search" size={16} color="#2d9e6b"/>
+          </button>
+          <button onClick={() => { setSubView("chatbot"); }} style={{ background: "#e4f5ec", border: "none", borderRadius: 10, padding: "7px 12px", cursor: "pointer" }}>
+            <Icon name="message" size={16} color="#2d9e6b"/>
+          </button>
+          <button style={{ background: "none", border: "none", cursor: "pointer", position: "relative" }}>
+            <Icon name="bell" size={20} color="#4a7060"/>
+            <span style={{ position: "absolute", top: 0, right: 0, width: 7, height: 7, background: "#e53935", borderRadius: "50%" }}/>
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div key={subView || tab} className="fade-up" style={{ overflowY: "auto", minHeight: "calc(100vh - 130px)" }}>
+        {subView ? renderSubView() : renderTab()}
+      </div>
+
+      {/* BOTTOM NAV */}
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430,
+        background: "rgba(255,255,255,.97)", backdropFilter: "blur(16px)", borderTop: "1px solid #e0ece4",
+        display: "flex", justifyContent: "space-around", padding: "8px 0 12px", zIndex: 100 }}>
+        {navItems.map(n => (
+          <button key={n.id} className={`nav-item ${tab === n.id && !subView ? "active" : ""}`}
+            onClick={() => { setTab(n.id); setSubView(null); }}>
+            <Icon name={n.icon} size={22} color={tab === n.id && !subView ? "#2d9e6b" : "#7a9e8a"}
+              strokeWidth={tab === n.id && !subView ? 2.2 : 1.6}/>
+            {n.label}
+          </button>
+        ))}
+      </div>
+
+      {/* SOS FAB */}
+      <button className="sos-btn" onClick={handleSOS}
+        style={{ animation: sosFlash ? "none" : "pulse 2.5s infinite", background: sosFlash ? "#b71c1c" : "linear-gradient(135deg,#e53935,#b71c1c)" }}>
+        <Icon name="phone" size={20} color="#fff"/>
+        <span>SOS</span>
+      </button>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ROOT — manages auth screen state
+// ════════════════════════════════════════════════════════════════════
+export default function SwasthayaLink() {
+  // "splash" | "login" | "register" | "dashboard"
+  const [screen, setScreen] = useState("splash");
+  const [user,   setUser]   = useState(null);
+
+  // Both Login and Register call this — goes straight to dashboard
+  function enterApp(u) {
+    setUser(u);
+    setScreen("dashboard");
+  }
+
+  function logout() {
+    setUser(null);
+    setScreen("login");
+  }
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }}/>
+      <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+        {screen === "splash"    && <Splash    next={() => setScreen("login")}/>}
+        {screen === "login"     && <Login     goHome={enterApp} goRegister={() => setScreen("register")}/>}
+        {screen === "register"  && <Register  goHome={enterApp} goLogin={() => setScreen("login")}/>}
+        {screen === "dashboard" && user       && <Dashboard user={user} onLogout={logout}/>}
+      </div>
+    </>
+  );
+}
